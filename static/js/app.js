@@ -1,0 +1,3738 @@
+// Base path: read from <meta name="base-path"> set in HTML.
+// On GitHub Pages the meta has "/sib_khvoinik_test"; Timeweb deploy
+// sed-replaces it to "/"; localhost template leaves it empty.
+var BASE_PATH = (function () {
+  var el = document.querySelector('meta[name="base-path"]');
+  if (el) {
+    var p = el.getAttribute('content');
+    return (!p || p === '/') ? '' : p.replace(/\/+$/, '');
+  }
+  return '';
+})();
+
+function initYear() {
+  const el = document.getElementById('year');
+  if (!el) return;
+  const d = new Date();
+  el.textContent = String(d.getFullYear());
+}
+
+// ── 152-ФЗ: Consent checkbox injection ──
+function initConsentCheckboxes() {
+  document.querySelectorAll('form[data-ui-form]').forEach((form) => {
+    if (form.querySelector('[name="consent"]')) return;
+    const submitBtn = form.querySelector('button[type="submit"], button:not([type])');
+    if (!submitBtn) return;
+
+    const wrapper = document.createElement('label');
+    wrapper.className = 'flex items-start gap-2 text-xs text-slate-500 cursor-pointer';
+    wrapper.innerHTML =
+      '<input type="checkbox" name="consent" required class="mt-0.5 accent-brand shrink-0" />' +
+      '<span>Даю <a href="' + BASE_PATH + '/consent/" class="text-brand underline hover:text-brand2" target="_blank">согласие на обработку персональных данных</a>' +
+      ' в соответствии с <a href="' + BASE_PATH + '/privacy/" class="text-brand underline hover:text-brand2" target="_blank">Политикой конфиденциальности</a></span>';
+
+    const checkbox = wrapper.querySelector('input');
+    submitBtn.disabled = true;
+    submitBtn.classList.add('opacity-50');
+    checkbox.addEventListener('change', () => {
+      submitBtn.disabled = !checkbox.checked;
+      submitBtn.classList.toggle('opacity-50', !checkbox.checked);
+    });
+
+    submitBtn.parentNode.insertBefore(wrapper, submitBtn);
+  });
+}
+
+// ── 152-ФЗ: Cookie banner ──
+
+// Плавающие элементы не должны перекрывать куки-плашку: пока баннер виден,
+// поднимаем над ним виджет садовых центров (слева, inline bottom) и кнопку
+// Битрикс24 (справа, через body-класс + CSS-переменную в styles.css, т.к. её
+// DOM появляется асинхронно из CDN-лоадера).
+function syncFloatingUiAboveCookieBanner() {
+  var banner = document.getElementById('cookieBanner');
+  var bannerVisible = !!(banner && !banner.classList.contains('hidden'));
+  var h = bannerVisible ? banner.offsetHeight : 0;
+  document.documentElement.style.setProperty('--sg-cookie-banner-h', h + 'px');
+  document.body.classList.toggle('sg-cookie-banner-open', bannerVisible);
+  var widget = document.getElementById('centersWidget');
+  if (widget) widget.style.bottom = bannerVisible ? (h + 8) + 'px' : '';
+}
+
+function initCookieBanner() {
+  const banner = document.getElementById('cookieBanner');
+  const acceptAll = document.getElementById('cookieAcceptAll');
+  const necessaryOnly = document.getElementById('cookieNecessaryOnly');
+  const settingsBtn = document.getElementById('cookieSettingsBtn');
+  if (!banner || !acceptAll || !necessaryOnly) return;
+
+  const consent = localStorage.getItem('cookie_consent');
+  if (!consent) {
+    banner.classList.remove('hidden');
+  } else if (consent === 'all') {
+    loadConsentedScripts();
+  }
+  syncFloatingUiAboveCookieBanner();
+  window.addEventListener('resize', syncFloatingUiAboveCookieBanner);
+
+  const setConsent = (value) => {
+    localStorage.setItem('cookie_consent', value);
+    banner.classList.add('hidden');
+    syncFloatingUiAboveCookieBanner();
+    if (value === 'all') loadConsentedScripts();
+  };
+
+  acceptAll.addEventListener('click', () => setConsent('all'));
+  necessaryOnly.addEventListener('click', () => setConsent('necessary'));
+
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+      localStorage.removeItem('cookie_consent');
+      banner.classList.remove('hidden');
+      syncFloatingUiAboveCookieBanner();
+    });
+  }
+}
+
+// ── Счётчики аналитики: грузятся только после «Принять все» в cookie-баннере (152-ФЗ).
+// Виджет онлайн-чата Битрикс24 отнесён к необходимым сервисам (канал консультаций)
+// и грузится всегда - см. раздел 10 политики конфиденциальности. ──
+function loadConsentedScripts() {
+  initYandexMetrika();
+  initTopMailRu();
+}
+
+let metrikaLoaded = false;
+function initYandexMetrika() {
+  if (metrikaLoaded) return;
+  metrikaLoaded = true;
+
+  (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+  m[i].l=1*new Date();
+  for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+  k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+  (window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=108722541", "ym");
+
+  ym(108722541, "init", {
+    ssr: true,
+    webvisor: true,
+    clickmap: true,
+    ecommerce: "dataLayer",
+    referrer: document.referrer,
+    url: location.href,
+    accurateTrackBounce: true,
+    trackLinks: true,
+  });
+}
+
+let tmrLoaded = false;
+function initTopMailRu() {
+  if (tmrLoaded) return;
+  tmrLoaded = true;
+
+  var _tmr = window._tmr || (window._tmr = []);
+  _tmr.push({ id: '3760896', type: 'pageView', start: (new Date()).getTime() });
+  (function(d, w, id) {
+    if (d.getElementById(id)) return;
+    var ts = d.createElement('script'); ts.type = 'text/javascript'; ts.async = true; ts.id = id;
+    ts.src = 'https://top-fwz1.mail.ru/js/code.js';
+    var f = function() { var s = d.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ts, s); };
+    if (w.opera == '[object Opera]') { d.addEventListener('DOMContentLoaded', f, false); } else { f(); }
+  })(document, window, 'tmr-code');
+}
+
+let b24WidgetLoaded = false;
+function initBitrix24Widget() {
+  if (b24WidgetLoaded) return;
+  b24WidgetLoaded = true;
+
+  (function(w,d,u){
+    var s=d.createElement('script');s.async=true;s.src=u+'?'+(Date.now()/60000|0);
+    var h=d.getElementsByTagName('script')[0];h.parentNode.insertBefore(s,h);
+  })(window,document,'https://cdn-ru.bitrix24.ru/b32582882/crm/site_button/loader_3_nrfj41.js');
+}
+
+// ── Аналитика: клики по телефону, почте, копирование почты ──
+function initAnalyticsClicks() {
+  var METRIKA_ID = 108722541;
+  var lastFired = {};
+  function fire(goal) {
+    if (!window.ym) return;
+    var now = Date.now();
+    if (lastFired[goal] && now - lastFired[goal] < 1500) return;
+    lastFired[goal] = now;
+    try { ym(METRIKA_ID, 'reachGoal', goal); } catch (e) { /* noop */ }
+  }
+
+  document.addEventListener('click', function (e) {
+    var link = e.target && e.target.closest ? e.target.closest('a[href^="tel:"]') : null;
+    if (link) { fire('phone_click'); return; }
+    var mail = e.target && e.target.closest ? e.target.closest('a[href^="mailto:"]') : null;
+    if (mail) { fire('email_copy'); }
+  }, true);
+
+  document.addEventListener('copy', function () {
+    try {
+      var sel = (window.getSelection && window.getSelection().toString()) || '';
+      if (/@gazony\.ru/i.test(sel)) fire('email_copy');
+    } catch (e) { /* noop */ }
+  }, true);
+}
+
+// UI-only placeholder PDF generators
+window.SGDownloadGazonChecklist = function () {
+  const text =
+    'Чек-лист подготовки участка под газон\\n\\n1) Подготовка основания\\n2) Планировка грунтов\\n3) Завоз грунтов\\n4) Вертикальная планировка\\n5) Готовый результат\\n\\nЭто заглушка для этапа 1.';
+  const blob = new Blob([text], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'checklist-gazon.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+/** Герои на весь экран минус шапка. Убирает щель снизу на мобильных браузерах. */
+function initViewportHeroHeights() {
+  const header = document.getElementById('site-header');
+  const heroes = document.querySelectorAll(
+    '[data-home-hero], [data-gazon-hero], [data-ozelenenie-hero], [data-b2b-hero], [data-pitomnik-hero], [data-sadovye-centry-hero], [data-zaboty-hero]'
+  );
+  if (!header || heroes.length === 0) return;
+
+  const apply = () => {
+    const h = window.innerHeight - header.offsetHeight;
+    // +1px: субпиксель / GitHub Pages / Safari — иначе снизу проступает белый body
+    const px = `${Math.max(280, Math.ceil(h) + 1)}px`;
+    heroes.forEach((el) => {
+      el.style.minHeight = px;
+    });
+  };
+
+  apply();
+  let t = null;
+  window.addEventListener('resize', () => {
+    window.clearTimeout(t);
+    t = window.setTimeout(apply, 100);
+  });
+  window.addEventListener('orientationchange', apply);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => apply());
+    ro.observe(header);
+  }
+}
+
+/** Hero главной: как у «Газон» — без вспышки первого кадра MP4 до фактического playing */
+function initHomeHeroVideo() {
+  const v = document.querySelector('section[data-home-hero] video.hero-bg-video');
+  if (!v) return;
+  const reveal = () => v.classList.add('is-home-hero-ready');
+  v.addEventListener('playing', reveal, { once: true });
+  try {
+    if (!v.paused && v.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) reveal();
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+/** Hero «Газон»: плавное появление видео после start воспроизведения — убирает кадр из кэша/рассинхрон с poster */
+function initGazonHeroVideo() {
+  const v = document.getElementById('gazon-hero-video');
+  if (!v) return;
+  const reveal = () => v.classList.add('is-gazon-hero-ready');
+  v.addEventListener('playing', reveal, { once: true });
+  try {
+    if (!v.paused && v.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) reveal();
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function initB2bHeroVideo() {
+  const v = document.getElementById('b2b-hero-video');
+  if (!v) return;
+  const reveal = () => v.classList.add('is-b2b-hero-ready');
+  v.addEventListener('playing', reveal, { once: true });
+  try {
+    if (!v.paused && v.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) reveal();
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function initBurger() {
+  const burgerBtn = document.getElementById('burgerBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (!burgerBtn || !mobileMenu) return;
+  burgerBtn.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+    const open = !mobileMenu.classList.contains('hidden');
+    burgerBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (window.lucide) window.lucide.createIcons();
+  });
+
+  // Close menu when clicking a link
+  mobileMenu.querySelectorAll('a').forEach((a) => {
+    a.addEventListener('click', () => {
+      mobileMenu.classList.add('hidden');
+      burgerBtn.setAttribute('aria-expanded', 'false');
+    });
+  });
+}
+
+function initCatalogSearch() {
+  const overlay = document.getElementById('searchOverlay');
+  const input = document.getElementById('searchInput');
+  const resultsBox = document.getElementById('searchResults');
+  const openBtns = Array.from(document.querySelectorAll('[data-search-open]'));
+  if (!overlay || !input || !resultsBox || !openBtns.length) return;
+
+  const endpoint = overlay.getAttribute('data-search-endpoint');
+  let index = null; // null = не грузили, [] = пусто/ошибка
+  let loading = null;
+  let debounceTimer = null;
+
+  const norm = (s) => (s || '').toLowerCase().replace(/ё/g, 'е');
+
+  function loadIndex() {
+    if (index || loading) return loading;
+    loading = fetch(endpoint)
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((data) => {
+        index = (data.items || []).map((it) => ({ ...it, q: norm(it.n + ' ' + it.l) }));
+        return index;
+      })
+      .catch(() => { index = []; return index; });
+    return loading;
+  }
+
+  function hint(text) {
+    resultsBox.innerHTML =
+      '<div class="px-3 py-6 text-center text-sm text-slate-500">' + text + '</div>';
+  }
+
+  function renderResults(query) {
+    const q = norm(query).trim();
+    if (!q) {
+      hint('Начните вводить название растения');
+      return;
+    }
+    if (!index) {
+      hint('Загружаем каталог…');
+      loadIndex().then(() => renderResults(input.value));
+      return;
+    }
+    const words = q.split(/\s+/).filter(Boolean);
+    const matched = index.filter((it) => words.every((w) => it.q.includes(w)));
+    // Сначала совпадения с начала названия, затем остальные
+    matched.sort((a, b) => {
+      const aStart = a.q.startsWith(q) ? 0 : 1;
+      const bStart = b.q.startsWith(q) ? 0 : 1;
+      return aStart - bStart || a.n.localeCompare(b.n, 'ru');
+    });
+    const top = matched.slice(0, 20);
+    if (!top.length) {
+      resultsBox.innerHTML =
+        '<div class="px-3 py-6 text-center text-sm text-slate-500">Ничего не нашлось.<br/>' +
+        '<a href="/catalog/" class="mt-2 inline-block font-medium text-brand hover:underline">Открыть весь каталог</a></div>';
+      return;
+    }
+    resultsBox.innerHTML = top
+      .map((it) => {
+        const img = it.i
+          ? '<img src="' + it.i + '" alt="" loading="lazy" class="h-12 w-12 shrink-0 rounded-xl object-cover bg-slate-100" />'
+          : '<span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400"><i data-lucide="sprout" class="h-5 w-5"></i></span>';
+        const latin = it.l ? '<span class="block truncate text-xs text-slate-400">' + it.l + '</span>' : '';
+        // В строке результата только цена: полный teaser с контейнерами давит название на мобиле
+        const price = (it.t || '').split('·')[0].trim();
+        const teaser = price ? '<span class="shrink-0 whitespace-nowrap text-sm font-medium text-slate-600">' + price + '</span>' : '';
+        return (
+          '<a href="/catalog/' + it.s + '/" class="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-brand/5">' +
+          img +
+          '<span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium text-slate-800">' + it.n + '</span>' + latin + '</span>' +
+          teaser +
+          '</a>'
+        );
+      })
+      .join('');
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function openSearch() {
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    renderResults(input.value);
+    loadIndex();
+    // Небольшая задержка: iOS не фокусирует внутри только что показанного слоя
+    setTimeout(() => input.focus(), 30);
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function closeSearch() {
+    overlay.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  openBtns.forEach((btn) => btn.addEventListener('click', openSearch));
+  overlay.querySelectorAll('[data-search-close]').forEach((el) => el.addEventListener('click', closeSearch));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeSearch();
+  });
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => renderResults(input.value), 150);
+  });
+  // Enter = переход на первый результат
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const first = resultsBox.querySelector('a[href^="/catalog/"]');
+    if (first) window.location.href = first.getAttribute('href');
+  });
+}
+
+function initNavDropdowns() {
+  const dds = Array.from(document.querySelectorAll('[data-nav-dd]'));
+  if (!dds.length) return;
+  const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
+
+  function setState(dd, open) {
+    const trigger = dd.querySelector('[data-nav-trigger]');
+    const panel = dd.querySelector('[data-nav-panel]');
+    const chevron = dd.querySelector('[data-nav-chevron]');
+    if (panel) panel.classList.toggle('hidden', !open);
+    if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (chevron) chevron.classList.toggle('rotate-180', open);
+  }
+  function closeAll(except) {
+    dds.forEach((dd) => { if (dd !== except) setState(dd, false); });
+  }
+
+  dds.forEach((dd) => {
+    const trigger = dd.querySelector('[data-nav-trigger]');
+    const panel = dd.querySelector('[data-nav-panel]');
+    if (!trigger || !panel) return;
+    const isMobile = dd.hasAttribute('data-nav-mobile');
+
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      const open = trigger.getAttribute('aria-expanded') === 'true';
+      if (open) {
+        setState(dd, false);
+      } else {
+        closeAll(dd);
+        setState(dd, true);
+      }
+    });
+
+    if (!isMobile) {
+      dd.addEventListener('mouseenter', () => {
+        if (isDesktop()) { closeAll(dd); setState(dd, true); }
+      });
+      dd.addEventListener('mouseleave', () => {
+        if (isDesktop()) setState(dd, false);
+      });
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAll(null);
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-nav-dd]')) closeAll(null);
+  });
+}
+
+function initModal() {
+  const overlay = document.getElementById('modalOverlay');
+  const host = document.getElementById('modalHost');
+  const closeTop = document.getElementById('modalCloseTop');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  if (!overlay || !host || !closeTop || !modalTitle || !modalBody) return;
+  const sizeWrap = host.firstElementChild;
+  const modalCard = sizeWrap && sizeWrap.firstElementChild;
+  let activeNoOverlay = false;
+  let titleFxStyleReady = false;
+
+  const templateMap = {
+    'mini_brief': 'modal-template-mini_brief',
+    'home_private_choice': 'modal-template-home_private_choice',
+    'home_b2b_choice': 'modal-template-home_b2b_choice',
+    'home_private_buy': 'modal-template-home_private_buy',
+    'home_b2b_buy': 'modal-template-home_b2b_buy',
+    'home_b2b_project': 'modal-template-home_b2b_project',
+    'contact_zaboty': 'modal-template-contact_zaboty',
+    'contact_zaboty_calendar': 'modal-template-contact_zaboty_calendar',
+    'zaboty_expert_visit': 'modal-template-zaboty_expert_visit',
+    'contact_consult': 'modal-template-contact_consult',
+    'catalog_actual_stock': 'modal-template-catalog_actual_stock',
+    'catalog_electronic_catalog': 'modal-template-catalog_electronic_catalog',
+    'b2b_cpo': 'modal-template-b2b_cpo',
+    'b2b_price_stock': 'modal-template-b2b_price_stock',
+    'b2b_project_calc': 'modal-template-b2b_project_calc',
+    'b2b_care_reglement': 'modal-template-b2b_care_reglement',
+    'b2b_payment_question': 'modal-template-b2b_payment_question',
+    'gazon_price_list': 'modal-template-gazon_price_list',
+    'gazon_price_download': 'modal-template-gazon_price_download',
+    'gazon_factory_open_day': 'modal-template-pitomnik_open_day_signup',
+    'gazon_cpo': 'modal-template-gazon_cpo',
+    'gazon_checklist': 'modal-template-gazon_checklist',
+    'gazon_open_day': 'modal-template-gazon_open_day',
+    'home_gazon_excursion': 'modal-template-home_gazon_excursion',
+    'gazon_logistics': 'modal-template-gazon_logistics',
+    'gazon_presentation': 'modal-template-gazon_presentation',
+    'gazon_calc': 'modal-template-gazon_calc',
+    'ozelenenie_ready_project': 'modal-template-ozelenenie-ready_project',
+    'ozelenenie_mini_project': 'modal-template-ozelenenie-mini_project',
+    'ozelenenie_audit_plan': 'modal-template-ozelenenie-audit_plan',
+    'ozelenenie_assess_upload': 'modal-template-ozelenenie-assess_upload',
+    'ozelenenie_send_project': 'modal-template-ozelenenie-send_project',
+    'ozelenenie_materials_scheme': 'modal-template-ozelenenie-materials_scheme',
+    'pitomnik_presentation': 'modal-template-pitomnik_presentation',
+    'pitomnik_open_day_signup': 'modal-template-pitomnik_open_day_signup',
+    'sadovye_digital_card': 'modal-template-sadovye_digital_card',
+    'sadovye_novinki_notify': 'modal-template-sadovye_novinki_notify',
+    'sadovye_novinka_1': 'modal-template-sadovye_novinka_1',
+    'sadovye_novinka_2': 'modal-template-sadovye_novinka_2',
+    'sadovye_novinka_3': 'modal-template-sadovye_novinka_3',
+    'sadovye_novinka_4': 'modal-template-sadovye_novinka_4',
+  };
+
+  const initConsentGate = (root) => {
+    const forms = Array.from(root.querySelectorAll('form'));
+    forms.forEach((form) => {
+      const checkbox = form.querySelector('[data-consent-checkbox]');
+      const submitBtn = form.querySelector('[data-consent-submit]');
+      if (!checkbox || !submitBtn) return;
+      if (form.dataset.consentBound === '1') return;
+      form.dataset.consentBound = '1';
+
+      const syncState = () => {
+        submitBtn.disabled = !checkbox.checked;
+      };
+
+      checkbox.addEventListener('change', syncState);
+      syncState();
+    });
+  };
+
+  // Формы прямо на странице (не в модалке) с data-consent-gated: без этого вызова
+  // кнопка «Отправить» оставалась бы заблокированной навсегда - гейт вешался только
+  // на свежесклонированное тело модалки.
+  initConsentGate(document);
+
+  const ensureModalTitleFx = () => {
+    if (titleFxStyleReady || document.getElementById('sg-modal-title-fx')) return;
+    const st = document.createElement('style');
+    st.id = 'sg-modal-title-fx';
+    st.textContent =
+      '.sg-modal-title-arrow{display:inline-block;animation:sg-modal-arrow-bob 1.2s ease-in-out infinite;}' +
+      '@keyframes sg-modal-arrow-bob{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}';
+    document.head.appendChild(st);
+    titleFxStyleReady = true;
+  };
+
+  const escapeTitleHtml = (text) =>
+    String(text || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+  const setModalTitle = (title) => {
+    const t = String(title || '');
+    if (!t.includes('→')) {
+      modalTitle.textContent = t;
+      return;
+    }
+    ensureModalTitleFx();
+    const i = t.indexOf('→');
+    const left = escapeTitleHtml(t.slice(0, i));
+    const right = escapeTitleHtml(t.slice(i + 1));
+    modalTitle.innerHTML = `${left}<span class="sg-modal-title-arrow" aria-hidden="true">→</span>${right}`;
+  };
+
+  const renderSelectionModalPreview = (root, names) => {
+    if (!root || !Array.isArray(names) || !names.length) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'mb-4 rounded-2xl border border-brand/20 bg-brand/5 p-3';
+    const title = document.createElement('div');
+    title.className = 'text-xs font-semibold uppercase tracking-wide text-brand';
+    title.textContent = 'Вы выбрали:';
+    const chips = document.createElement('div');
+    chips.className = 'mt-2 flex max-h-28 flex-wrap gap-2 overflow-y-auto pr-1';
+    names.forEach((n) => {
+      const chip = document.createElement('span');
+      chip.className = 'inline-flex items-center rounded-full border border-brand/25 bg-white px-2.5 py-1 text-xs font-medium text-slate-700';
+      chip.textContent = n;
+      chips.appendChild(chip);
+    });
+    wrap.appendChild(title);
+    wrap.appendChild(chips);
+    root.insertBefore(wrap, root.firstChild);
+  };
+
+  // Отложенное скачивание файла: невидимый таймер запускает загрузку через
+  // delayMs, независимо от того, заполнит ли посетитель форму. Флаг гасит
+  // повторные таймеры при дабл-клике / повторном открытии модалки.
+  let fileDownloadPending = false;
+  const scheduleFileDownload = (url, filename, delayMs) => {
+    if (!url || fileDownloadPending) return;
+    fileDownloadPending = true;
+    setTimeout(() => {
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        if (filename) a.download = filename;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (err) {
+        console.warn('[SG download] не удалось начать загрузку:', err);
+      } finally {
+        fileDownloadPending = false;
+      }
+    }, delayMs);
+  };
+
+  const openModal = (targetKey, title, options) => {
+    const opts = options || {};
+    const tplId = templateMap[targetKey];
+    if (!tplId) {
+      console.warn('[SG modal] Неизвестный data-open-modal:', targetKey);
+      return;
+    }
+    const tpl = document.getElementById(tplId);
+    if (!tpl) {
+      console.warn('[SG modal] Нет элемента #', tplId);
+      return;
+    }
+
+    if (sizeWrap) {
+      sizeWrap.classList.remove('max-w-lg', 'max-w-2xl');
+      const wide =
+        targetKey === 'ozelenenie_mini_project' ||
+        targetKey === 'gazon_calc' ||
+        targetKey === 'b2b_project_calc' ||
+        targetKey === 'catalog_actual_stock' ||
+        targetKey === 'pitomnik_open_day_signup' ||
+        targetKey === 'gazon_factory_open_day' ||
+        targetKey === 'sadovye_novinka_1' ||
+        targetKey === 'sadovye_novinka_2' ||
+        targetKey === 'sadovye_novinka_3' ||
+        targetKey === 'sadovye_novinka_4';
+      sizeWrap.classList.add(wide ? 'max-w-2xl' : 'max-w-lg');
+    }
+
+    if (host) {
+      host.classList.toggle('backdrop-blur-[2px]', Boolean(opts.noOverlay));
+      host.classList.toggle('bg-white/20', Boolean(opts.noOverlay));
+    }
+    if (modalCard) {
+      modalCard.classList.toggle('border-brand/35', Boolean(opts.noOverlay));
+      modalCard.classList.toggle('bg-white/95', Boolean(opts.noOverlay));
+      modalCard.classList.toggle('shadow-[0_30px_80px_-30px_rgba(15,23,42,0.65)]', Boolean(opts.noOverlay));
+    }
+
+    setModalTitle(title || '');
+    modalBody.innerHTML = '';
+    modalBody.appendChild(tpl.content.cloneNode(true));
+    bindOpenModalButtons(modalBody);
+    renderSelectionModalPreview(modalBody, opts.selectionNames);
+    if (window.lucide) window.lucide.createIcons();
+
+    // Inject modal title as hidden field so it reaches B24 lead COMMENTS
+    const modalContext = opts.contextTitle || title;
+    const mForm = modalBody.querySelector('form[data-ui-form]');
+    if (modalContext && mForm) {
+      const h = document.createElement('input');
+      h.type = 'hidden';
+      h.name = 'modalContext';
+      h.value = modalContext;
+      mForm.appendChild(h);
+    }
+
+    // Полный список выбранных позиций каталога — отдельным скрытым полем,
+    // чтобы попасть в COMMENTS, а не в TITLE лида.
+    if (mForm && Array.isArray(opts.selectionNames) && opts.selectionNames.length) {
+      const plants = document.createElement('input');
+      plants.type = 'hidden';
+      plants.name = 'selectedPlants';
+      plants.value = opts.selectionNames.join(' | ');
+      mForm.appendChild(plants);
+    }
+
+    initConsentGate(modalBody);
+
+    // Inject consent checkbox into freshly cloned modal form
+    const modalForm = modalBody.querySelector('form[data-ui-form]');
+    if (modalForm && !modalForm.querySelector('[name="consent"]')) {
+      initConsentCheckboxes();
+    }
+
+    // Прайс газон: форма выезжает сразу, а файл скачивается через 5 секунд -
+    // даже если посетитель закроет модалку или не заполнит форму.
+    if (targetKey === 'gazon_price_download') {
+      scheduleFileDownload(opts.downloadUrl, opts.downloadName, 5000);
+      try { ym(108722541, 'reachGoal', 'price_download'); } catch (e) { /* noop */ }
+    }
+
+    activeNoOverlay = Boolean(opts.noOverlay);
+    if (activeNoOverlay) {
+      overlay.classList.add('hidden');
+    } else {
+      overlay.classList.remove('hidden');
+    }
+    host.classList.remove('hidden');
+    host.classList.add('modal-enter');
+    document.body.style.overflow = activeNoOverlay ? '' : 'hidden';
+  };
+
+  // Make it accessible for auto-open based on URL params.
+  window.SGOpenModal = openModal;
+
+  const closeModal = () => {
+    overlay.classList.add('hidden');
+    host.classList.add('hidden');
+    host.classList.remove('modal-enter');
+    activeNoOverlay = false;
+    host.classList.remove('backdrop-blur-[2px]', 'bg-white/20');
+    if (modalCard) {
+      modalCard.classList.remove('border-brand/35', 'bg-white/95', 'shadow-[0_30px_80px_-30px_rgba(15,23,42,0.65)]');
+    }
+    document.body.style.overflow = '';
+  };
+
+  closeTop.addEventListener('click', closeModal);
+  overlay.addEventListener('click', closeModal);
+  document.addEventListener('click', (e) => {
+    const closeBtn = e.target && e.target.closest('[data-close-modal]');
+    if (closeBtn) closeModal();
+  });
+
+  const handleOpenModalButton = (btn, e) => {
+    const key = btn.getAttribute('data-open-modal');
+    if (!key) return;
+    if (e) e.preventDefault();
+    const title = btn.getAttribute('data-modal-title') || '';
+    const noOverlay = btn.getAttribute('data-modal-no-overlay') === '1';
+    const contextTitle = btn.getAttribute('data-modal-context') || title;
+    const downloadUrl = btn.getAttribute('data-download-url') || '';
+    const downloadName = btn.getAttribute('data-download-name') || '';
+    let selectionNames = [];
+    try {
+      const rawNames = btn.getAttribute('data-modal-selection-names');
+      const parsed = rawNames ? JSON.parse(rawNames) : [];
+      selectionNames = Array.isArray(parsed) ? parsed.map((x) => String(x || '').trim()).filter(Boolean) : [];
+    } catch (err) {
+      selectionNames = [];
+    }
+    openModal(key, title, { noOverlay, contextTitle, selectionNames, downloadUrl, downloadName });
+  };
+
+  const bindOpenModalButtons = (root) => {
+    const scope = root || document;
+    scope.querySelectorAll('[data-open-modal]').forEach((btn) => {
+      if (btn.dataset.modalBound === '1') return;
+      btn.dataset.modalBound = '1';
+      btn.addEventListener('click', (e) => {
+        handleOpenModalButton(btn, e);
+      });
+    });
+  };
+
+  bindOpenModalButtons(document);
+
+  // Fallback delegation for any late-inserted elements.
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest('[data-open-modal]');
+    if (!btn) return;
+    handleOpenModalButton(btn, e);
+  });
+
+  // Fallback binding for stubborn overlap/click issues on care page CTA.
+  const zabotyCalendarCta = document.getElementById('zabotyCalendarCta');
+  if (zabotyCalendarCta && zabotyCalendarCta.dataset.boundDirectModal !== '1') {
+    zabotyCalendarCta.dataset.boundDirectModal = '1';
+    zabotyCalendarCta.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openModal('contact_zaboty_calendar', 'Получать календарь сезонных работ');
+    });
+  }
+
+  // ── Bitrix24 lead capture ──
+  const B24_WEBHOOK = 'https://sgpichugi.bitrix24.ru/rest/1339/6y8mhtwuvyc4du94';
+
+  // Human-readable form titles for Bitrix24 TITLE field
+  const FORM_TITLES = {
+    'request': 'Обращение с сайта',
+    'mini-brief': 'Мини-бриф',
+    'sluzhba-zaboty': 'Служба заботы',
+    'sluzhba-zaboty-calendar': 'Календарь сезонных работ',
+    'zaboty-expert-vyezd': 'Выезд специалиста (экспертная помощь)',
+    'consultation': 'Консультация',
+    'sadovye-novinki-notify': 'Уведомление о новинках',
+    'contract-request': 'Запрос КП (B2B)',
+    'project-calc': 'Расчёт проекта (B2B)',
+    'price-stock': 'Прайс и наличие (B2B)',
+    'reglement-uhoda': 'Регламент ухода (B2B)',
+    'payment-question': 'Вопрос по оплате (B2B)',
+    'gazon-price-list': 'Прайс-лист газон',
+    'gazon-price-after-download': 'Прайс газон: заявка после скачивания',
+    'gazon-cpo': 'КП на газон',
+    'gazon-checklist': 'Чек-лист газон',
+    'gazon-open-day': 'День открытых дверей',
+    'gazon-logistics': 'Логистика газон',
+    'gazon-presentation': 'Презентация газон',
+    'gazon-calc': 'Калькулятор газона',
+    'home-gazon-excursion': 'Экскурсия на рулонный газон',
+    'home-private-buy': 'Покупка продукции (частные лица)',
+    'home-b2b-buy': 'Покупка продукции (B2B)',
+    'home-project-calc': 'Просчет проекта (B2B)',
+    'ozelenenie-ready-project': 'Готовый проект озеленения',
+    'mini-project': 'Мини-проект озеленения',
+    'ozelenenie-audit-plan': 'Аудит участка',
+    'ozelenenie-assess-upload': 'Оценка участка (фото)',
+    'ozelenenie-send-project': 'Проверка проекта',
+    'ozelenenie-materials-scheme': 'Подбор материалов и схема',
+    'pitomnik-presentation': 'Презентация питомника',
+    'pitomnik-open-day-signup': 'Запись на день открытых дверей (Питомник)',
+    'digital-card': 'Цифровая карта',
+    'assortment-interest': 'Запрос по ассортименту (каталог)',
+    'discount-direct': 'Скидка на рассаду (Директ)',
+    'zayavka-direct': 'Заявка с лендинга Директа',
+    'predzakaz': 'Предзаказ деревьев на осень 2026',
+    'kottedzhi-direct': 'Коттеджи директ',
+  };
+
+  // Labels for COMMENTS fields
+  const FIELD_LABELS = {
+    objectType: 'Тип объекта',
+    area: 'Площадь, м²',
+    region: 'Регион',
+    topic: 'Тема',
+    openDayVisitDate: 'Дата посещения',
+    guestsCount: 'Количество участников',
+    message: 'Сообщение',
+    city: 'Город',
+    budget: 'Бюджет',
+    deadline: 'Сроки',
+    quantity: 'Количество',
+    comment: 'Комментарий',
+    village: 'Посёлок или район',
+    notes: 'Пожелания',
+    collaborationFormat: 'Формат сотрудничества',
+    clientType: 'Тип клиента',
+    deliveryWhen: 'Сроки поставки',
+    date: 'Дата',
+    format: 'Формат поставки',
+    stage: 'Стадия объекта',
+    preferred_messenger: 'Мессенджер',
+    link: 'Ссылка',
+    service: 'Услуга',
+    productType: 'Выбор продукции',
+    address: 'Адрес',
+    residentialComplex: 'Название ЖК',
+    projectFile: 'Файл проекта',
+    interest: 'Что интересует',
+    interest_vegetable_seedlings: 'Овощная рассада',
+    interest_annual_seedlings: 'Однолетняя рассада',
+    interest_perennials: 'Многолетние цветы',
+    interest_shrubs: 'Кустарники',
+    interest_trees: 'Деревья',
+    modalContext: 'Запрос',
+    open_day_kirza: '10 июня (питомник "Кирза")',
+  };
+
+  // Readable display values for select options
+  const VALUE_LABELS = {
+    ozelenenie: 'Озеленение', gazon: 'Газон',
+    sadovye_centry: 'Садовые центры', b2b: 'B2B',
+    roll: 'Поставка рулонного газона',
+    combined: 'Комбинированное решение',
+    plants: 'Контрактные поставки растений',
+    turnkey: 'Реализация под ключ',
+    partial: 'Частичная реализация',
+    partner: 'Партнёрство с ландшафтными компаниями',
+    uk: 'Сопровождение для УК',
+    max: 'MAX', telegram: 'Telegram', email: 'Эл. почта',
+    private_person: 'Частное лицо',
+    landscape_designer: 'Ландшафтный дизайнер',
+    developer_company: 'Застройщик / компания',
+    '10_june_2026_gazon_kirza': '10 июня 2026 - Рулонный газон (Новопичугово) + Питомник (Кирза)',
+  };
+
+  // care_*/promo_* checkbox labels (синхронно с CARE_SUBSCRIPTION_GROUPS в pages/data.py)
+  const CARE_LABELS = {
+    care_seasonal: 'Сезонный календарь работ',
+    care_trees: 'Деревья',
+    care_shrubs: 'Кустарники',
+    care_perennials: 'Многолетники',
+    care_roses: 'Розы',
+    care_lawn: 'Газон',
+    promo: 'Новинки и акции',
+  };
+
+  // Маршрутизация лидов по верхнему уровню заголовка (значение FORM_TITLES).
+  // Ключ — то же, что и leadTitle ниже. Всё, чего нет в этой таблице,
+  // падает на 1317 (Игорь Прошин, РОП) — это явное решение Стаса.
+  // ozelenenie-ready-project в Б24 переназначается роботом «по очереди»
+  // между Кашаповой и Жарковой, поэтому здесь дефолтный 1317.
+  const LEAD_ROUTING = {
+    'Запрос по ассортименту (каталог)': 1361,
+    'Скидка на рассаду (Директ)': 1361,
+    'Покупка продукции (частные лица)': 1361,
+    'Обращение с сайта': 1361,
+    'Запись на день открытых дверей (Питомник)': 1361,
+    'Консультация': 1361,
+    'Заявка с лендинга Директа': 1361,
+    'Предзаказ деревьев на осень 2026': 1361,
+    'Коттеджи директ': 1361,
+    'Покупка продукции (B2B)': 1347,
+    'Прайс и наличие (B2B)': 1347,
+    'Калькулятор газона': 17,
+    'Прайс-лист газон': 17,
+    'Прайс газон: заявка после скачивания': 17,
+    'Логистика газон': 17,
+  };
+  const LEAD_ROUTING_DEFAULT = 1317;
+
+  const sendLeadToB24 = (tag, payload) => {
+    const [section, formName] = tag.includes('/') ? tag.split('/', 2) : ['other', tag];
+
+    var leadTitle = FORM_TITLES[formName] || formName;
+
+    // Контекст «откуда» (название кнопки/раздела). Не клеим, если совпадает с названием формы.
+    var ctx = (payload.modalContext || '').trim();
+    var titleMain = leadTitle;
+    if (ctx && ctx.toLowerCase() !== leadTitle.toLowerCase()) {
+      titleMain = leadTitle + ' · ' + ctx;
+    }
+
+    const fields = {
+      TITLE: `Сайт: ${titleMain}`,
+      SOURCE_ID: '9',
+      ASSIGNED_BY_ID: LEAD_ROUTING[leadTitle] || LEAD_ROUTING_DEFAULT,
+      UTM_SOURCE: payload.utm_source || 'website',
+      UTM_MEDIUM: payload.utm_medium || section,
+      UTM_CAMPAIGN: payload.utm_campaign || '',
+      UTM_CONTENT: payload.utm_content || formName,
+      UTM_TERM: payload.utm_term || window.location.pathname,
+    };
+
+    // ── Map contact info to CRM fields ──
+    if (payload.name) fields.NAME = payload.name;
+    if (payload.contactPerson) fields.NAME = payload.contactPerson;
+    if (payload.phone) {
+      fields.PHONE = [{ VALUE: payload.phone, VALUE_TYPE: 'WORK' }];
+    }
+    if (payload.email) {
+      fields.EMAIL = [{ VALUE: payload.email, VALUE_TYPE: 'WORK' }];
+    }
+    // B2B forms use combined "contact" field for phone or email
+    if (payload.contact) {
+      var val = payload.contact.trim();
+      if (val.includes('@')) {
+        fields.EMAIL = [{ VALUE: val, VALUE_TYPE: 'WORK' }];
+      } else {
+        fields.PHONE = [{ VALUE: val, VALUE_TYPE: 'WORK' }];
+      }
+    }
+    if (payload.company) fields.COMPANY_TITLE = payload.company;
+
+    // ── Build COMMENTS from remaining fields ──
+    var skipKeys = [
+      'name', 'phone', 'email', 'company', 'formTag', 'consent',
+      'contactPerson', 'contact', 'consent_messages',
+      'modalContext', 'selectedPlants', 'pageTitle', 'pagePath', 'company_site',
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+    ];
+
+    var lines = [];
+
+    // Страница-источник: человеческое название + url
+    if (payload.pageTitle || payload.pagePath) {
+      var pageLine = payload.pageTitle || '';
+      if (payload.pagePath) {
+        pageLine += pageLine ? ' (' + payload.pagePath + ')' : payload.pagePath;
+      }
+      lines.push('<b>Страница:</b> ' + pageLine);
+    }
+
+    // Контекст обращения (заголовок раздела/кнопки, откуда открыта модалка)
+    if (payload.modalContext) lines.push('<b>Запрос:</b> ' + payload.modalContext);
+
+    // Список выбранных позиций каталога (если форму открыли из подбора)
+    if (payload.selectedPlants) {
+      var plantsList = String(payload.selectedPlants)
+        .split('|')
+        .map(function (s) { return s.trim(); })
+        .filter(Boolean);
+      if (plantsList.length) {
+        lines.push('<b>Выбранные позиции (' + plantsList.length + '):</b><br>• ' + plantsList.join('<br>• '));
+      }
+    }
+
+    // Group care_*/promo_* checkboxes into one line
+    var subs = Object.keys(payload)
+      .filter(function (k) { return (k.startsWith('care_') || k.startsWith('promo_')) && payload[k]; })
+      .map(function (k) { return CARE_LABELS[k] || k; });
+    if (subs.length) lines.push('<b>Подписки:</b> ' + subs.join(', '));
+
+    Object.entries(payload)
+      .filter(function (e) {
+        var k = e[0];
+        return !skipKeys.includes(k) && !k.startsWith('care_') && !k.startsWith('promo_');
+      })
+      .forEach(function (e) {
+        var k = e[0], v = e[1];
+        if (!v || v === '1') return; // skip empty and bare checkbox "1"
+        var label = FIELD_LABELS[k] || k;
+        var display = VALUE_LABELS[v] || v;
+        lines.push('<b>' + label + ':</b> ' + display);
+      });
+
+    if (lines.length) fields.COMMENTS = lines.join('<br>');
+
+    fetch(`${B24_WEBHOOK}/crm.lead.add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    }).catch((err) => console.warn('[B24] lead send failed:', err));
+  };
+
+  // Подписочная форма Службы заботы летит через наш Django-бэк (нужно для токена
+  // управления подпиской и записи в UF-поле «Служба заботы» multiselect).
+  // Любой сбой -> fallback в прямой Б24 ниже по коду (как для остальных форм).
+  const SUBSCRIBE_FORM_TAG = 'B2C/sluzhba-zaboty-calendar';
+  const CARE_SUBSCRIBE_ENDPOINT = '/api/care/subscribe/';
+  // Цифровая карта лояльности СЦ: данные летят на КОНТАКТ в Б24 через наш бэк
+  // (дедуп по телефону + поля карты). Любой сбой -> fallback в прямой Б24-лид ниже.
+  const LOYALTY_CARD_ENDPOINT = '/api/loyalty/card/';
+  const CARE_BACKEND_TIMEOUT_MS = 6000;
+  const CARE_TG_BOT_USERNAME = 'sg_customer_care_bot';
+  // Имя MAX-бота на платформе dev.max.ru. Пустая строка = бот ещё не запущен,
+  // в этом случае MAX-блок на success-экране остаётся скрытым.
+  const CARE_MAX_BOT_USERNAME = 'id5406820645_bot';
+  const CARE_GROUP_FIELD_LABELS = {
+    care_seasonal: 'Сезонный календарь',
+    care_trees: 'Деревья',
+    care_shrubs: 'Кустарники',
+    care_perennials: 'Многолетники',
+    care_roses: 'Розы',
+    care_lawn: 'Газон',
+  };
+
+  const parseUtmParams = () => {
+    const utm = {};
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      sp.forEach((v, k) => { if (k.toLowerCase().startsWith('utm_')) utm[k.toLowerCase()] = v; });
+    } catch (e) { /* noop */ }
+    return utm;
+  };
+
+  const trySubscribeViaCareBackend = async (payload) => {
+    const utm = parseUtmParams();
+    const body = Object.assign({}, payload, {
+      utm,
+      source: utm.utm_source ? 'ads' : 'web',
+    });
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), CARE_BACKEND_TIMEOUT_MS) : null;
+    try {
+      const resp = await fetch(CARE_SUBSCRIBE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        credentials: 'same-origin',
+        signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (timer) clearTimeout(timer);
+      if (!resp.ok) {
+        console.warn('[care] backend response not ok:', resp.status);
+        return null;
+      }
+      const data = await resp.json();
+      if (!data || !data.ok) return null;
+      try {
+        localStorage.setItem('sg_care_token', JSON.stringify({
+          id: data.id, t: data.token, s: data.signature, b24: data.b24_lead_id || null, ts: Date.now(),
+        }));
+      } catch (e) { /* noop */ }
+      return data;
+    } catch (e) {
+      if (timer) clearTimeout(timer);
+      console.warn('[care] backend send failed:', e && e.message || e);
+      return null;
+    }
+  };
+
+  const tryRegisterLoyaltyCard = async (payload) => {
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), CARE_BACKEND_TIMEOUT_MS) : null;
+    try {
+      const resp = await fetch(LOYALTY_CARD_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: payload.name || '',
+          phone: payload.phone || '',
+          consent: payload.consent || '',
+        }),
+        credentials: 'same-origin',
+        signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (timer) clearTimeout(timer);
+      if (!resp.ok) {
+        console.warn('[loyalty] backend response not ok:', resp.status);
+        return false;
+      }
+      const data = await resp.json();
+      return !!(data && data.ok);
+    } catch (e) {
+      if (timer) clearTimeout(timer);
+      console.warn('[loyalty] backend send failed:', e && e.message || e);
+      return false;
+    }
+  };
+
+  const buildCareSuccessContext = (payload, careResp) => {
+    const groupNames = Object.keys(CARE_GROUP_FIELD_LABELS)
+      .filter(k => String(payload[k] || '') === '1')
+      .map(k => CARE_GROUP_FIELD_LABELS[k]);
+    return {
+      groupsLabel: groupNames.length ? groupNames.join(', ') : 'Сезонный календарь',
+      email: payload.email || '',
+      tgDeepLink: `https://t.me/${CARE_TG_BOT_USERNAME}?start=${careResp.token}`,
+      maxDeepLink: CARE_MAX_BOT_USERNAME
+        ? `https://max.ru/${CARE_MAX_BOT_USERNAME}?start=${careResp.token}`
+        : '',
+    };
+  };
+
+  // Человек выбирает основной канал (Telegram / email) переключателем в форме,
+  // но email остаётся обязательным как подстраховка - письмо уходит всегда.
+  // Поэтому на success-экране показываем email-блок всегда, а блок с deep-link
+  // на Telegram-бот - как шаг opt-in (нажать Start). MAX-блок показывается
+  // только если выставлен CARE_MAX_BOT_USERNAME (бот реально создан на dev.max.ru).
+  const renderCareSuccess = (modalBody, ctx) => {
+    const tpl = document.getElementById('modal-template-success-care');
+    if (!tpl) return false;
+    modalBody.innerHTML = '';
+    modalBody.appendChild(tpl.content.cloneNode(true));
+    const groupsEl = modalBody.querySelector('[data-care-success-groups]');
+    if (groupsEl) groupsEl.textContent = ctx.groupsLabel;
+    const tgBlock = modalBody.querySelector('[data-care-success-channel="telegram"]');
+    const maxBlock = modalBody.querySelector('[data-care-success-channel="max"]');
+    const emailBlock = modalBody.querySelector('[data-care-success-channel="email"]');
+    if (emailBlock) emailBlock.classList.remove('hidden');
+    if (tgBlock) tgBlock.classList.remove('hidden');
+    if (maxBlock) {
+      if (ctx.maxDeepLink) {
+        maxBlock.classList.remove('hidden');
+        const maxLink = maxBlock.querySelector('[data-care-success-max-link]');
+        if (maxLink) maxLink.setAttribute('href', ctx.maxDeepLink);
+      } else {
+        maxBlock.classList.add('hidden');
+      }
+    }
+    const a = modalBody.querySelector('[data-care-success-tg-link]');
+    if (a) a.setAttribute('href', ctx.tgDeepLink);
+    if (ctx.email) {
+      const el = modalBody.querySelector('[data-care-success-email]');
+      if (el) el.textContent = ctx.email;
+    }
+    if (window.lucide) window.lucide.createIcons();
+    return true;
+  };
+
+  // Submit UI-only forms (save to localStorage)
+  const handleUiSubmit = async (form) => {
+    const tag = form.getAttribute('data-form-tag') || 'unknown';
+    const uiAction = form.getAttribute('data-ui-action') || '';
+
+    // Honeypot-защита от спама: скрытое поле, которое заполняют только боты.
+    // Если оно непустое - тихо имитируем успех, ничего не отправляя.
+    const honeypot = form.querySelector('input[name="company_site"]');
+    if (honeypot && honeypot.value.trim()) {
+      return;
+    }
+
+    // Native HTML5 validation (required, type=*, pattern) — браузер покажет тултип на первом невалидном поле
+    if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+      return;
+    }
+
+    // Кастомная проверка телефона: минимум 10 цифр после очистки от пробелов/скобок/дефисов
+    const phoneInput = form.querySelector('input[name="phone"]');
+    if (phoneInput) {
+      const digits = (phoneInput.value || '').replace(/\D/g, '');
+      if (digits.length < 10) {
+        phoneInput.setCustomValidity('Введите номер телефона целиком — не менее 10 цифр.');
+        phoneInput.reportValidity();
+        const clearOnce = () => phoneInput.setCustomValidity('');
+        phoneInput.addEventListener('input', clearOnce, { once: true });
+        return;
+      }
+      phoneInput.setCustomValidity('');
+    }
+
+    const formData = new FormData(form);
+    const payload = {};
+    for (const [k, v] of formData.entries()) {
+      if (v instanceof File) {
+        if (!v.name) continue;
+        payload[k] = v.name;
+        continue;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, k)) {
+        const cur = payload[k];
+        payload[k] = Array.isArray(cur) ? [...cur, v] : [cur, v];
+      } else {
+        payload[k] = v;
+      }
+    }
+
+    // Источник: человеческое название страницы (тот, что в табе) и URL без префикса GitHub Pages.
+    try {
+      const cleanTitle = (document.title || '')
+        .replace(/\s*[—\-]\s*Сибирские газоны\s*$/i, '')
+        .trim();
+      if (cleanTitle) payload.pageTitle = cleanTitle;
+      const path = (window.location.pathname || '').replace(/^\/sib_khvoinik_test/, '') || '/';
+      payload.pagePath = path;
+    } catch (e) { /* noop */ }
+
+    const entry = { tag, payload, ts: new Date().toISOString() };
+    const key = 'sg_leads';
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    existing.push(entry);
+    localStorage.setItem(key, JSON.stringify(existing));
+
+    // Подписочная форма Службы заботы: через наш бэк (токен управления, UF-поле).
+    // Если бэк недоступен / 5xx / таймаут - падаем на прямой Б24 ниже.
+    let careResp = null;
+    if (tag === SUBSCRIBE_FORM_TAG) {
+      careResp = await trySubscribeViaCareBackend(payload);
+    }
+    // Цифровая карта лояльности: контакт + поля карты через наш бэк (дедуп по телефону).
+    let loyaltyOk = false;
+    const isDigitalCardTag = tag === 'digital-card' || tag.endsWith('/digital-card');
+    if (!careResp && isDigitalCardTag) {
+      loyaltyOk = await tryRegisterLoyaltyCard(payload);
+    }
+    if (!careResp && !loyaltyOk) {
+      sendLeadToB24(tag, payload);
+    }
+
+    if (window.ym) {
+      try { ym(108722541, 'reachGoal', 'form_submit_any'); } catch (e) { /* noop */ }
+      var specificGoal = null;
+      if (tag === 'discount-direct' || tag.endsWith('/discount-direct')) {
+        specificGoal = 'form_submit_discount';
+      } else if (tag === 'zayavka-direct' || tag.endsWith('/zayavka-direct')) {
+        specificGoal = 'form_submit_direct';
+      } else if (tag === 'predzakaz' || tag.endsWith('/predzakaz')) {
+        specificGoal = 'form_submit_predzakaz';
+      } else if (tag === 'kottedzhi-direct' || tag.endsWith('/kottedzhi-direct')) {
+        specificGoal = 'form_submit_kottedzhi';
+      } else {
+        specificGoal = 'form_submit_site';
+      }
+      try { ym(108722541, 'reachGoal', specificGoal); } catch (e) { /* noop */ }
+    }
+
+    // Swap to success template. Для подписочной формы - специальный шаблон с
+    // ссылкой на TG-бота / подсказкой про email.
+    modalTitle.textContent = '';
+    let careSuccessRendered = false;
+    if (careResp && tag === SUBSCRIBE_FORM_TAG) {
+      const ctx = buildCareSuccessContext(payload, careResp);
+      careSuccessRendered = renderCareSuccess(modalBody, ctx);
+    }
+    if (!careSuccessRendered) {
+      const isDigitalCard = tag === 'digital-card' || tag.endsWith('/digital-card');
+      const isPredzakaz = tag === 'predzakaz' || tag.endsWith('/predzakaz');
+      const successTplId = isDigitalCard
+        ? 'modal-template-success-digital-card'
+        : (isPredzakaz ? 'modal-template-success-predzakaz' : 'modal-template-success');
+      const successTpl = document.getElementById(successTplId)
+        || document.getElementById('modal-template-success');
+      if (successTpl) {
+        modalBody.innerHTML = '';
+        modalBody.appendChild(successTpl.content.cloneNode(true));
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }
+
+    // Optional UI-only side effects
+    if (uiAction === 'download_gazon_checklist') {
+      window.SGDownloadGazonChecklist && window.SGDownloadGazonChecklist();
+    }
+
+    // Ensure success is visible even for non-modal forms
+    if (activeNoOverlay) {
+      overlay.classList.add('hidden');
+      host.classList.add('backdrop-blur-[2px]', 'bg-white/20');
+      if (modalCard) {
+        modalCard.classList.add('border-brand/35', 'bg-white/95', 'shadow-[0_30px_80px_-30px_rgba(15,23,42,0.65)]');
+      }
+    } else {
+      overlay.classList.remove('hidden');
+      host.classList.remove('backdrop-blur-[2px]', 'bg-white/20');
+      if (modalCard) {
+        modalCard.classList.remove('border-brand/35', 'bg-white/95', 'shadow-[0_30px_80px_-30px_rgba(15,23,42,0.65)]');
+      }
+    }
+    host.classList.remove('hidden');
+    document.body.style.overflow = activeNoOverlay ? '' : 'hidden';
+  };
+
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (!form.hasAttribute('data-ui-form')) return;
+    e.preventDefault();
+    handleUiSubmit(form);
+  });
+}
+
+/**
+ * Страницы раздела каталога (шаблон с #catalog-category-main): на мобильных
+ * после выбора раздела/подраздела плавно прокручиваем к карточкам.
+ * На десктопе не вмешиваемся.
+ */
+function initCatalogCategoryMobileAutoScroll() {
+  const main = document.getElementById('catalog-category-main');
+  if (!main) return;
+
+  const mqMobile = window.matchMedia('(max-width: 1023px)');
+  const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const STORAGE_KEY = 'sg_catalog_mobile_scroll_to_main_v1';
+
+  const aside = main.previousElementSibling;
+  if (!(aside instanceof HTMLElement)) return;
+  const navCard = aside.querySelector('[data-catalog-nav-card]');
+  if (!(navCard instanceof HTMLElement)) return;
+
+  const scrollMainIntoView = () => {
+    if (!mqMobile.matches) return;
+    main.scrollIntoView({
+      behavior: mqReduce.matches ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  };
+
+  const normalize = (url) => `${url.pathname.replace(/\/+$/, '') || '/'}?${url.searchParams.toString()}`;
+  const currentUrl = new URL(window.location.href);
+
+  try {
+    if (mqMobile.matches && window.sessionStorage.getItem(STORAGE_KEY) === '1') {
+      window.sessionStorage.removeItem(STORAGE_KEY);
+      window.requestAnimationFrame(() => {
+        window.setTimeout(scrollMainIntoView, 120);
+      });
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  navCard.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href]');
+    if (!(link instanceof HTMLAnchorElement)) return;
+    if (!mqMobile.matches) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    let targetUrl = null;
+    try {
+      targetUrl = new URL(link.href, window.location.href);
+    } catch (err) {
+      return;
+    }
+    if (targetUrl.origin !== window.location.origin) return;
+
+    const isSamePage = normalize(targetUrl) === normalize(currentUrl);
+    if (isSamePage) {
+      e.preventDefault();
+      scrollMainIntoView();
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(STORAGE_KEY, '1');
+    } catch (err) {
+      // ignore
+    }
+  });
+
+  // Кнопка "Подробнее" в карточках раздела: после перехода на карточку
+  // прокрутить мобильный экран ниже блока навигации к контенту карточки.
+  main.querySelectorAll('a[data-catalog-more][href]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      if (!mqMobile.matches) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      try {
+        const targetUrl = new URL(link.href, window.location.href);
+        if (targetUrl.origin !== window.location.origin) return;
+        window.sessionStorage.setItem(STORAGE_KEY, '1');
+      } catch (err) {
+        // ignore
+      }
+    });
+  });
+}
+
+function initAccordion() {
+  document.querySelectorAll('[data-accordion]').forEach((acc) => {
+    const items = acc.querySelectorAll('[data-accordion-item]');
+    items.forEach((item) => {
+      const btn = item.querySelector('[data-accordion-toggle]');
+      const panel = item.querySelector('[data-accordion-panel]');
+      if (!btn || !panel) return;
+      btn.addEventListener('click', () => {
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        // toggle
+        btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        panel.classList.toggle('hidden', expanded);
+      });
+      // default state
+      btn.setAttribute('aria-expanded', btn.getAttribute('aria-expanded') || 'false');
+    });
+  });
+}
+
+function initAnimations() {
+  const els = Array.from(document.querySelectorAll('[data-animate="fadeInUp"]'));
+  if (!els.length) return;
+
+  els.forEach((el) => {
+    el.classList.add('opacity-0', 'translate-y-4');
+  });
+
+  const obs = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        el.classList.remove('opacity-0', 'translate-y-4');
+        el.classList.add('opacity-100', 'translate-y-0');
+        el.style.transition = 'opacity 600ms ease, transform 600ms ease';
+        obs.unobserve(el);
+      });
+    },
+    { threshold: 0.12 }
+  );
+
+  els.forEach((el) => obs.observe(el));
+}
+
+function initCounters() {
+  const counters = Array.from(document.querySelectorAll('[data-counter-target]'));
+  if (!counters.length) return;
+
+  const animate = (el, target) => {
+    const duration = 900;
+    const start = performance.now();
+    const from = 0;
+
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const val = Math.round(from + (target - from) * (t * (2 - t)));
+      el.textContent = String(val);
+      if (t < 1) requestAnimationFrame(step);
+    };
+
+    requestAnimationFrame(step);
+  };
+
+  const obs = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        const target = Number(el.getAttribute('data-counter-target'));
+        if (Number.isNaN(target)) return;
+        animate(el, target);
+        obs.unobserve(el);
+      });
+    },
+    { threshold: 0.25 }
+  );
+
+  counters.forEach((el) => obs.observe(el));
+}
+
+/** Слайдер фото тепличного комбината на странице «Питомник» + полноэкранный просмотр по тапу на фото (только viewport ≤767px). */
+function initPitomnikGreenhouseSlider() {
+  const root = document.querySelector('[data-pitomnik-greenhouse-slider]');
+  if (!root) return;
+  const track = root.querySelector('[data-pitomnik-greenhouse-track]');
+  if (!track) return;
+  const n = track.children.length;
+  if (n === 0) return;
+
+  const slides = Array.from(track.children);
+  const imgData = slides.map((cell) => {
+    const img = cell.querySelector('img[data-pitomnik-greenhouse-slide-img], img');
+    if (!img || !img.getAttribute('src')) return null;
+    return { src: img.src, alt: img.getAttribute('alt') || '' };
+  });
+  const hasLightbox = imgData.some(Boolean);
+
+  let i = 0;
+  const dots = Array.from(root.querySelectorAll('[data-pitomnik-greenhouse-dot]'));
+  const prev = root.querySelector('[data-pitomnik-greenhouse-prev]');
+  const next = root.querySelector('[data-pitomnik-greenhouse-next]');
+
+  const apply = () => {
+    track.style.transform = `translateX(-${i * 100}%)`;
+    dots.forEach((btn, j) => {
+      const on = j === i;
+      btn.setAttribute('data-active', on ? 'true' : 'false');
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  };
+
+  prev?.addEventListener('click', () => {
+    i = (i - 1 + n) % n;
+    apply();
+  });
+  next?.addEventListener('click', () => {
+    i = (i + 1) % n;
+    apply();
+  });
+  dots.forEach((btn, j) => {
+    btn.addEventListener('click', () => {
+      i = j;
+      apply();
+    });
+  });
+
+  apply();
+
+  if (!hasLightbox) return;
+
+  const mqGreenhouseLb = window.matchMedia('(max-width: 767px)');
+  const greenhouseLbAllowed = () => mqGreenhouseLb.matches;
+
+  const nextImgIndex = (from) => {
+    for (let s = 1; s <= n; s += 1) {
+      const j = (from + s) % n;
+      if (imgData[j]) return j;
+    }
+    return from;
+  };
+  const prevImgIndex = (from) => {
+    for (let s = 1; s <= n; s += 1) {
+      const j = (from - s + n) % n;
+      if (imgData[j]) return j;
+    }
+    return from;
+  };
+
+  const lb = document.createElement('div');
+  lb.className = 'pitomnik-greenhouse-lightbox';
+  lb.setAttribute('role', 'dialog');
+  lb.setAttribute('aria-modal', 'false');
+  lb.setAttribute('aria-hidden', 'true');
+  lb.setAttribute('aria-label', 'Просмотр фото тепличного комбината');
+  const svgChevL =
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+  const svgChevR =
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+  lb.innerHTML = [
+    '<div class="pitomnik-greenhouse-lightbox__backdrop" data-pgh-lb-backdrop></div>',
+    '<div class="pitomnik-greenhouse-lightbox__surface">',
+    '<div class="pitomnik-greenhouse-lightbox__img-wrap">',
+    '<img class="pitomnik-greenhouse-lightbox__img" data-pgh-lb-img alt="" />',
+    '</div>',
+    '<button type="button" class="pitomnik-greenhouse-lightbox__close" data-pgh-lb-close aria-label="Закрыть">&times;</button>',
+    '<button type="button" class="pitomnik-greenhouse-lightbox__nav pitomnik-greenhouse-lightbox__nav--prev" data-pgh-lb-prev aria-label="Предыдущее фото">',
+    svgChevL,
+    '</button>',
+    '<button type="button" class="pitomnik-greenhouse-lightbox__nav pitomnik-greenhouse-lightbox__nav--next" data-pgh-lb-next aria-label="Следующее фото">',
+    svgChevR,
+    '</button>',
+    '</div>',
+  ].join('');
+  document.body.appendChild(lb);
+
+  const backdrop = lb.querySelector('[data-pgh-lb-backdrop]');
+  const lbImg = lb.querySelector('[data-pgh-lb-img]');
+  const btnClose = lb.querySelector('[data-pgh-lb-close]');
+  const btnPrev = lb.querySelector('[data-pgh-lb-prev]');
+  const btnNext = lb.querySelector('[data-pgh-lb-next]');
+
+  let lbIndex = 0;
+  let lbOpen = false;
+  let bodyOverflowPrev = '';
+  let touchStartX = null;
+
+  const paintLb = () => {
+    const d = imgData[lbIndex];
+    if (!d || !lbImg) return;
+    lbImg.src = d.src;
+    lbImg.alt = d.alt;
+  };
+
+  const closeLb = () => {
+    if (!lbOpen) return;
+    lbOpen = false;
+    lb.classList.remove('is-open');
+    lb.setAttribute('aria-hidden', 'true');
+    lb.setAttribute('aria-modal', 'false');
+    document.body.style.overflow = bodyOverflowPrev;
+    document.removeEventListener('keydown', onLbKeydown);
+  };
+
+  const openLb = (startIndex) => {
+    if (!imgData[startIndex]) return;
+    lbIndex = startIndex;
+    paintLb();
+    lbOpen = true;
+    lb.classList.add('is-open');
+    lb.setAttribute('aria-hidden', 'false');
+    lb.setAttribute('aria-modal', 'true');
+    bodyOverflowPrev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onLbKeydown);
+    i = lbIndex;
+    apply();
+  };
+
+  function onLbKeydown(e) {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      e.preventDefault();
+      closeLb();
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      lbIndex = prevImgIndex(lbIndex);
+      paintLb();
+      i = lbIndex;
+      apply();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      lbIndex = nextImgIndex(lbIndex);
+      paintLb();
+      i = lbIndex;
+      apply();
+    }
+  }
+
+  track.addEventListener('click', (e) => {
+    if (!greenhouseLbAllowed()) return;
+    const t = e.target;
+    if (!t || t.tagName !== 'IMG') return;
+    if (!track.contains(t)) return;
+    const cell = t.parentElement;
+    const idx = slides.indexOf(cell);
+    if (idx === -1 || !imgData[idx]) return;
+    openLb(idx);
+  });
+
+  mqGreenhouseLb.addEventListener('change', () => {
+    if (!greenhouseLbAllowed() && lbOpen) closeLb();
+  });
+
+  backdrop?.addEventListener('click', () => closeLb());
+  btnClose?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeLb();
+  });
+  btnPrev?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lbIndex = prevImgIndex(lbIndex);
+    paintLb();
+    i = lbIndex;
+    apply();
+  });
+  btnNext?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lbIndex = nextImgIndex(lbIndex);
+    paintLb();
+    i = lbIndex;
+    apply();
+  });
+
+  lb.addEventListener(
+    'touchstart',
+    (e) => {
+      if (!lbOpen) return;
+      if (e.changedTouches && e.changedTouches[0]) {
+        touchStartX = e.changedTouches[0].screenX;
+      }
+    },
+    { passive: true }
+  );
+  lb.addEventListener(
+    'touchend',
+    (e) => {
+      if (!lbOpen || touchStartX == null) return;
+      const tch = e.changedTouches && e.changedTouches[0];
+      if (!tch) {
+        touchStartX = null;
+        return;
+      }
+      const x0 = touchStartX;
+      touchStartX = null;
+      const dx = tch.screenX - x0;
+      if (Math.abs(dx) < 48) return;
+      if (dx > 0) {
+        lbIndex = prevImgIndex(lbIndex);
+      } else {
+        lbIndex = nextImgIndex(lbIndex);
+      }
+      paintLb();
+      i = lbIndex;
+      apply();
+    },
+    { passive: true }
+  );
+}
+
+/** Мини-слайдеры в карточках ассортимента на странице «Садовые центры». */
+function initSadovyeAssortmentSliders() {
+  const roots = Array.from(document.querySelectorAll('[data-sadovye-assortment-slider]'));
+  if (!roots.length) return;
+
+  roots.forEach((root) => {
+    const track = root.querySelector('[data-sadovye-assortment-track]');
+    if (!track) return;
+    const n = track.children.length;
+    if (n === 0) return;
+
+    let i = 0;
+    const dots = Array.from(root.querySelectorAll('[data-sadovye-assortment-dot]'));
+    const prev = root.querySelector('[data-sadovye-assortment-prev]');
+    const next = root.querySelector('[data-sadovye-assortment-next]');
+
+    const apply = () => {
+      const slideWidth = root.clientWidth || 0;
+      track.style.transform = `translateX(-${i * slideWidth}px)`;
+      dots.forEach((btn, j) => {
+        const on = j === i;
+        btn.setAttribute('data-active', on ? 'true' : 'false');
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    };
+
+    prev?.addEventListener('click', () => {
+      i = (i - 1 + n) % n;
+      apply();
+    });
+    next?.addEventListener('click', () => {
+      i = (i + 1) % n;
+      apply();
+    });
+    dots.forEach((btn, j) => {
+      btn.addEventListener('click', () => {
+        i = j;
+        apply();
+      });
+    });
+
+    window.addEventListener('resize', apply);
+    apply();
+  });
+}
+
+/** Слайдер «Расширенная экспертная помощь» на странице «Служба заботы»: картинка + подпись слева синхронно. */
+function initZabotyExpertSlider() {
+  const roots = Array.from(document.querySelectorAll('[data-zaboty-expert-slider]'));
+  if (!roots.length) return;
+
+  roots.forEach((root) => {
+    const viewport = root.querySelector('[data-zaboty-expert-slider-viewport]');
+    const track = root.querySelector('[data-zaboty-expert-track]');
+    const caption = root.querySelector('[data-zaboty-expert-caption]');
+    if (!viewport || !track || !caption) return;
+
+    const slides = Array.from(track.querySelectorAll('[data-zaboty-expert-slide]'));
+    const n = slides.length;
+    if (n === 0) return;
+
+    let i = 0;
+    const dots = Array.from(root.querySelectorAll('[data-zaboty-expert-dot]'));
+    const prev = root.querySelector('[data-zaboty-expert-prev]');
+    const next = root.querySelector('[data-zaboty-expert-next]');
+
+    const setCaption = () => {
+      const text = slides[i]?.getAttribute('data-caption') || '';
+      caption.textContent = text;
+    };
+
+    const apply = () => {
+      const slideWidth = viewport.clientWidth || 0;
+      track.style.transform = `translateX(-${i * slideWidth}px)`;
+      dots.forEach((btn, j) => {
+        const on = j === i;
+        btn.setAttribute('data-active', on ? 'true' : 'false');
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      setCaption();
+    };
+
+    prev?.addEventListener('click', () => {
+      i = (i - 1 + n) % n;
+      apply();
+    });
+    next?.addEventListener('click', () => {
+      i = (i + 1) % n;
+      apply();
+    });
+    dots.forEach((btn, j) => {
+      btn.addEventListener('click', () => {
+        i = j;
+        apply();
+      });
+    });
+
+    window.addEventListener('resize', apply);
+    apply();
+  });
+}
+
+function initBeforeAfterSliders() {
+  const sliders = Array.from(document.querySelectorAll('[data-before-after]'));
+  if (!sliders.length) return;
+
+  const clamp = (n) => Math.min(100, Math.max(0, n));
+
+  sliders.forEach((root) => {
+    const range = root.querySelector('[data-before-after-range]');
+    const overlay = root.querySelector('[data-before-after-overlay]');
+    const divider = root.querySelector('[data-before-after-divider]');
+    const handle = root.querySelector('[data-before-after-handle]');
+    if (!range || !overlay || !divider || !handle) return;
+
+    const update = (value) => {
+      const pct = clamp(Number(value));
+      overlay.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+      divider.style.left = `${pct}%`;
+      handle.style.left = `${pct}%`;
+      range.value = String(pct);
+    };
+
+    const start = Number(root.getAttribute('data-before-after-start') || range.value || 50);
+    update(start);
+    range.addEventListener('input', () => update(range.value));
+    range.addEventListener('change', () => update(range.value));
+  });
+}
+
+function initGazonCalculator() {
+  const inlineForm = document.getElementById('gazonCalculator');
+  if (!inlineForm) return;
+
+  /** Прайс-лист 2026 (с НДС 5%): только объём м²; регион и формат поставки на цену не влияют */
+  const gazonPricePerM2 = (a) => {
+    if (!a || Number.isNaN(a) || a <= 0) return null;
+    if (a >= 2500) return 540;
+    if (a > 1000) return 575;
+    if (a > 500) return 585;
+    return 590;
+  };
+
+  const CALC_DISCLAIMER =
+    'Это ориентировочный расчет. Точная стоимость зависит от объема, региона и условий поставки.';
+
+  const formatRu = (n) => new Intl.NumberFormat('ru-RU').format(Math.round(n));
+
+  const calculate = (area, outTotal, outPer, outNote, onCalculated) => {
+    const a = Number(area.value);
+    const per = gazonPricePerM2(a);
+    if (per == null) return;
+
+    const total = per * a;
+
+    outPer.textContent = `${formatRu(per)} ₽`;
+    outTotal.textContent = `${formatRu(total)} ₽`;
+    if (outNote) outNote.textContent = CALC_DISCLAIMER;
+
+    if (onCalculated) onCalculated();
+  };
+
+  if (inlineForm) {
+    const area = document.getElementById('calcArea');
+    const region = document.getElementById('calcRegion');
+    const format = document.getElementById('calcFormat');
+    const outTotal = document.getElementById('calcTotal');
+    const outPer = document.getElementById('calcPerM2');
+    const outNote = document.getElementById('calcNote');
+    if (!area || !region || !format || !outTotal || !outPer || !outNote) return;
+
+    if (inlineForm.dataset.boundInline === '1') return;
+    inlineForm.dataset.boundInline = '1';
+
+    const onCalc = () => calculate(area, outTotal, outPer, outNote);
+
+    ['input', 'change'].forEach((evt) => {
+      area.addEventListener(evt, onCalc);
+      region.addEventListener(evt, onCalc);
+      format.addEventListener(evt, onCalc);
+    });
+
+    inlineForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      onCalc();
+    });
+  }
+
+}
+
+/** Карта на странице «Контакты»: три метки (API 2.1). Координаты фиксированы (OSM), без геокодера —
+ *  на GitHub Pages геокодер Яндекса часто даёт пустой ответ или «левые» точки при тех же запросах, что на localhost. */
+function initContactsYandexMap() {
+  const el = document.getElementById('contactsYandexMap');
+  if (!el) return;
+  if (el.dataset.sgContactsMap === '1') return;
+  el.dataset.sgContactsMap = '1';
+
+  const apiKey = (
+    (typeof window.SG_YANDEX_MAPS_API_KEY === 'string' && window.SG_YANDEX_MAPS_API_KEY) ||
+    el.getAttribute('data-yandex-maps-key') ||
+    ''
+  ).trim();
+
+  // [широта, долгота] WGS84 — проверено по OpenStreetMap (здание / ТЦ / центр села)
+  const places = [
+    {
+      title: 'Главный офис',
+      address: 'г. Новосибирск, ул. Железнодорожная, 12/1, оф.501',
+      coords: [55.0453816, 82.9017817],
+    },
+    {
+      title: 'Садовый центр №1',
+      address: 'г. Новосибирск, ул. Ватутина, 107, СЦ Мега',
+      coords: [54.9642844, 82.9362306],
+    },
+    {
+      title: 'Садовый центр №2',
+      address: 'с. Новопичугово, ориентир ул. Сосновая, СЦ Новопичугово',
+      coords: [54.61031, 82.34969],
+    },
+  ];
+
+  const showFallback = () => {
+    el.className =
+      'flex h-56 min-h-[14rem] w-full items-center justify-center bg-slate-100 px-6 text-center text-sm text-slate-600 md:h-80';
+    el.textContent = 'Карту не удалось загрузить. Адреса указаны в блоке слева.';
+  };
+
+  const loadYandexScript = () =>
+    new Promise((resolve, reject) => {
+      if (window.ymaps) {
+        window.ymaps.ready(() => resolve());
+        return;
+      }
+      const s = document.createElement('script');
+      const keyPart = apiKey ? `&apikey=${encodeURIComponent(apiKey)}` : '';
+      s.src = `https://api-maps.yandex.ru/2.1/?lang=ru_RU${keyPart}`;
+      s.async = true;
+      s.onload = () => {
+        if (!window.ymaps) {
+          reject(new Error('ymaps'));
+          return;
+        }
+        window.ymaps.ready(() => resolve());
+      };
+      s.onerror = () => reject(new Error('load'));
+      document.head.appendChild(s);
+    });
+
+  loadYandexScript()
+    .then(() => {
+      const { ymaps } = window;
+      const map = new ymaps.Map(
+        el,
+        {
+          center: [55.03, 82.95],
+          zoom: 9,
+          controls: ['zoomControl', 'typeSelector'],
+        },
+        { suppressMapOpenBlock: true }
+      );
+
+      const collection = new ymaps.GeoObjectCollection();
+      places.forEach((p) => {
+        collection.add(
+          new ymaps.Placemark(
+            p.coords,
+            {
+              balloonContentHeader: p.title,
+              balloonContentBody: p.address,
+            },
+            { preset: 'islands#greenIcon' }
+          )
+        );
+      });
+      map.geoObjects.add(collection);
+      const bounds = collection.getBounds();
+      if (bounds) {
+        map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 48 });
+      }
+    })
+    .catch(() => showFallback());
+}
+
+/** Карточка товара: варианты высота + контейнер → цена и наличие (data-plant-variant-picker). */
+function initPlantVariantPicker() {
+  const root = document.querySelector('[data-plant-variant-picker]');
+  if (!root) return;
+  const jsonEl = document.getElementById('plant-variants-json');
+  if (!jsonEl || !jsonEl.textContent) return;
+  let variants;
+  try {
+    variants = JSON.parse(jsonEl.textContent);
+  } catch (e) {
+    return;
+  }
+  if (!Array.isArray(variants) || variants.length === 0) return;
+  // «уточняйте»/пусто = высота не зафиксирована (типично для комовых). Не выдумываем
+  // «фиксированную» - помечаем как расплывчатое значение и показываем честно.
+  const isVague = (s) => s === '' || /уточн/i.test(s);
+  const normalizeHeightLabel = (v) => {
+    const s = String(v || '').trim();
+    return isVague(s) ? '' : s;
+  };
+  const normalizeContainerLabel = (v) => {
+    const s = String(v || '').trim();
+    if (s === 'кассета 6 ячеек' || s === 'кассета из 6 ячеек') return s;
+    if (s === 'кассета из 4 ячеек' || s === 'кассета 4 ячеек') return s;
+    if (/^формат\s+уточняйте$/i.test(s) || /^уточняйте$/i.test(s)) return 'формат уточняется';
+    return s;
+  };
+  variants = variants.map((x) => ({
+    ...x,
+    height: normalizeHeightLabel(x && x.height),
+    container: normalizeContainerLabel(x && x.container),
+  }));
+
+  const heightGroup = root.querySelector('[data-pv-height-group]');
+  const heightWrap = root.querySelector('[data-pv-height-wrap]');
+  const heightNote = root.querySelector('[data-pv-height-note]');
+  const contGroup = root.querySelector('[data-pv-container-group]');
+  const contNote = root.querySelector('[data-pv-container-note]');
+  const priceEl = root.querySelector('[data-pv-price]');
+  const hintEl = root.querySelector('[data-pv-stock-hint]');
+  const badgeEl = root.querySelector('[data-pv-stock-badge]');
+  const productName = root.getAttribute('data-product-name') || '';
+
+  if (!root.dataset.pvInquiryStockBound) {
+    root.dataset.pvInquiryStockBound = '1';
+    root.addEventListener('click', (e) => {
+      const link = e.target && e.target.closest('[data-pv-inquiry-stock]');
+      if (!link) return;
+      e.preventDefault();
+      const selBtn = root.querySelector('[data-pv-sync-selection-button="1"]');
+      if (selBtn && typeof window.SGOpenPodborInquiryFromButton === 'function') {
+        window.SGOpenPodborInquiryFromButton(selBtn);
+      }
+    });
+  }
+
+  if (!heightGroup || !contGroup || !priceEl) return;
+
+  const uniq = (arr) => [...new Set(arr)];
+
+  // Тара - ведущее поле. Клиент выбирает формат посадки (C2.3 / C5 / ком),
+  // высота подстраивается под выбранную тару.
+  let curC = uniq(variants.map((x) => x.container))[0];
+  let curH = '';
+
+  const CHIP_ON =
+    'rounded-xl border border-brand bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition';
+  const CHIP_OFF =
+    'rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-brand/50 hover:text-brand';
+
+  const HEIGHT_ROW_ON =
+    'flex w-full items-center justify-between gap-3 rounded-xl border border-brand bg-brand/[0.07] px-4 py-2.5 text-sm font-semibold text-slate-900 transition';
+  const HEIGHT_ROW_OFF =
+    'flex w-full items-center justify-between gap-3 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand/50';
+
+  function containersAll() {
+    return uniq(variants.map((x) => x.container));
+  }
+
+  function heightsForContainer(c) {
+    return uniq(variants.filter((x) => x.container === c).map((x) => x.height));
+  }
+
+  function findVariant(c, h) {
+    return (
+      variants.find((x) => x.container === c && x.height === h) ||
+      variants.find((x) => x.container === c) ||
+      null
+    );
+  }
+
+  // Человеческая расшифровка формата прямо под кнопками - чтобы «ком»/«C2.3»
+  // были понятны без открытия справки. Подробности - по значку ⓘ.
+  function containerHint(c) {
+    const s = String(c || '').toLowerCase();
+    if (/ком/.test(s)) return 'Ком: растение выкопано из поля с комом земли (в сетке или мешковине). Так продают крупные деревья и кустарники - готово к посадке на участке.';
+    if (/кассет/.test(s)) return 'Кассета: несколько растений в общей упаковке, каждое в своей ячейке. Удобно для живой изгороди и массовой посадки.';
+    if (/кашпо/.test(s)) return 'Кашпо: растение уже в декоративном горшке - можно не пересаживать, сразу на террасу или у входа.';
+    if (/^р\s*\d|^p\s*\d/.test(s)) return 'Маленький стакан: молодой саженец под доращивание, самая низкая цена.';
+    if (/^[cс]\s*\d/.test(s)) return 'Контейнер (горшок с землёй): растение с закрытой корневой системой, готово к посадке. Число - объём горшка в литрах.';
+    return '';
+  }
+
+  function updateContainerNote() {
+    if (!contNote) return;
+    contNote.textContent = containerHint(curC);
+  }
+
+  function renderContainerChips() {
+    contGroup.innerHTML = '';
+    containersAll().forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.pvContainerChip = '';
+      b.dataset.value = c;
+      b.textContent = c;
+      const active = c === curC;
+      b.className = active ? CHIP_ON : CHIP_OFF;
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      contGroup.appendChild(b);
+    });
+    updateContainerNote();
+  }
+
+  function priceForHeight(c, h) {
+    const v = variants.find((x) => x.container === c && x.height === h);
+    return v ? v.price || '' : '';
+  }
+
+  // Все высоты выбранной тары видны сразу списком строк «высота - цена»:
+  // клиенту не нужно догадываться, что вариантов несколько и цена зависит от высоты.
+  // Комовые и т.п. без фиксированной высоты - список прячем, пишем «высота уточняется».
+  function renderHeightRows() {
+    const heights = heightsForContainer(curC).filter((h) => h !== '');
+    heightGroup.innerHTML = '';
+    if (!heights.length) {
+      curH = '';
+      heightGroup.classList.add('hidden');
+      if (heightNote) {
+        heightNote.textContent = 'Высота уточняется при заказе.';
+        heightNote.classList.remove('hidden');
+      }
+      return;
+    }
+    if (!heights.includes(curH)) curH = heights[0];
+    heightGroup.classList.remove('hidden');
+    if (heightNote) heightNote.classList.add('hidden');
+    heights.forEach((h) => {
+      const active = h === curH;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.pvHeightRow = '';
+      b.dataset.value = h;
+      b.className = active ? HEIGHT_ROW_ON : HEIGHT_ROW_OFF;
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', active ? 'true' : 'false');
+      const left = document.createElement('span');
+      left.className = 'flex min-w-0 items-center gap-2.5';
+      const dot = document.createElement('span');
+      dot.className = active
+        ? 'h-4 w-4 shrink-0 rounded-full border-[5px] border-brand bg-white'
+        : 'h-4 w-4 shrink-0 rounded-full border border-black/25 bg-white';
+      dot.setAttribute('aria-hidden', 'true');
+      const lab = document.createElement('span');
+      lab.className = 'truncate';
+      lab.textContent = h;
+      left.appendChild(dot);
+      left.appendChild(lab);
+      const price = document.createElement('span');
+      price.className = active ? 'shrink-0 font-semibold text-brand' : 'shrink-0 font-semibold text-slate-800';
+      price.textContent = priceForHeight(curC, h);
+      b.appendChild(left);
+      b.appendChild(price);
+      heightGroup.appendChild(b);
+    });
+  }
+
+  function currentVariant() {
+    return findVariant(curC, curH);
+  }
+
+  function applyVariant(v) {
+    if (!v) return;
+    priceEl.textContent = v.price;
+    const stock = Boolean(v.in_stock);
+    if (hintEl) {
+      hintEl.textContent = stock
+        ? 'В продаже (точное наличие - по запросу).'
+        : 'Этого формата сейчас нет в наличии; спросите о поступлении.';
+      hintEl.className = stock ? 'mt-2 text-sm text-slate-600' : 'mt-2 text-sm font-medium text-slate-500';
+    }
+    if (badgeEl) {
+      if (stock) {
+        badgeEl.innerHTML =
+          'Наличие:&nbsp;<a href="#" class="underline decoration-brand/40 underline-offset-2 hover:text-brand2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 rounded-sm" data-pv-inquiry-stock aria-label="Открыть форму уточнения наличия для выбранного варианта">уточнить</a>';
+        badgeEl.className =
+          'rounded-2xl border border-black/5 bg-brand/10 px-4 py-2 text-sm font-semibold text-brand min-h-[2.75rem] flex items-center';
+      } else {
+        badgeEl.textContent = 'Нет в наличии';
+        badgeEl.className =
+          'rounded-2xl border border-black/10 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-500 min-h-[2.75rem] flex items-center';
+      }
+    }
+
+    const detail = v.height ? `${v.container}, ${v.height}` : v.container;
+    const selectionBtn = root.querySelector('[data-pv-sync-selection-button="1"]');
+    if (selectionBtn) {
+      selectionBtn.setAttribute('data-selection-variant', detail);
+      selectionBtn.setAttribute('data-selection-price', v.price || '');
+      selectionBtn.setAttribute('data-selection-id', `${selectionBtn.getAttribute('data-selection-id') || productName}-${detail}`);
+    }
+  }
+
+  renderContainerChips();
+  renderHeightRows();
+
+  contGroup.addEventListener('click', (e) => {
+    const chip = e.target && e.target.closest('[data-pv-container-chip]');
+    if (!chip) return;
+    const val = chip.dataset.value;
+    if (val === curC) return;
+    curC = val;
+    renderContainerChips();
+    renderHeightRows();
+    const v = currentVariant();
+    if (v) applyVariant(v);
+  });
+  heightGroup.addEventListener('click', (e) => {
+    const row = e.target && e.target.closest('[data-pv-height-row]');
+    if (!row) return;
+    const val = row.dataset.value;
+    if (val === curH) return;
+    curH = val;
+    renderHeightRows();
+    const v = currentVariant();
+    if (v) applyVariant(v);
+  });
+
+  applyVariant(currentVariant() || variants[0]);
+}
+
+const SG_SELECTION_ADD_ANIM_MS = 800;
+const SG_SELECTION_PULSE_MS = 200;
+
+function ensureSelectionAddEffectStyles() {
+  if (document.getElementById('sg-selection-add-fx')) return;
+  const st = document.createElement('style');
+  st.id = 'sg-selection-add-fx';
+  st.textContent =
+    '.sg-selection-pulse{animation:sg-selection-pulse-anim ' +
+    SG_SELECTION_PULSE_MS +
+    'ms ease-in-out}' +
+    '@keyframes sg-selection-pulse-anim{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}' +
+    '.sg-selection-flash-layer{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;opacity:0;' +
+    'background:linear-gradient(135deg,#fff 0%,#fef9c3 42%,#fde68a 100%)}' +
+    '.sg-selection-flash-layer.sg-selection-flash-on{animation:sg-selection-flash-anim .24s ease-out forwards}' +
+    '@keyframes sg-selection-flash-anim{0%{opacity:.88}55%{opacity:.45}100%{opacity:0}}' +
+    '.sg-selection-petal{position:absolute;left:50%;top:50%;width:7px;height:11px;margin-left:-3.5px;margin-top:-5.5px;' +
+    'border-radius:50% 50% 50% 50%/65% 65% 35% 35%;' +
+    'background:radial-gradient(circle at 30% 25%,#fecdd3 0%,#e11d48 42%,#9f1239 88%);' +
+    'box-shadow:0 0 2px rgba(190,18,60,.35);transform-origin:50% 85%;pointer-events:none;z-index:2;opacity:1;' +
+    'animation:sg-selection-petal-burst .8s cubic-bezier(.22,1,.36,1) forwards}' +
+    '@keyframes sg-selection-petal-burst{0%{transform:translate3d(0,0,0) rotate(var(--sg-p-r,0deg)) scale(1);opacity:1}' +
+    '100%{transform:translate3d(var(--sg-tx,0),var(--sg-ty,0),0) rotate(calc(var(--sg-p-r,0deg) + 28deg)) scale(.15);opacity:0}}' +
+    '@media (prefers-reduced-motion:reduce){.sg-selection-pulse{animation:none}' +
+    '.sg-selection-petal{animation-duration:.01ms!important;opacity:0!important}' +
+    '.sg-selection-flash-layer.sg-selection-flash-on{animation-duration:.01ms!important}}';
+  document.head.appendChild(st);
+}
+
+function ensureSelectionButtonLabel(btn) {
+  let label = btn.querySelector('[data-selection-label]');
+  if (!label) {
+    const text = (btn.textContent || '').replace(/\s+/g, ' ').trim() || 'Добавить в подбор';
+    btn.textContent = '';
+    label = document.createElement('span');
+    label.setAttribute('data-selection-label', '');
+    label.className = 'relative z-[1] inline-block';
+    label.textContent = text;
+    btn.appendChild(label);
+  }
+  // Запоминаем исходную подпись кнопки (в сетке «В подбор», на карточке «Добавить в подбор»),
+  // чтобы возвращать её при удалении позиции из подбора
+  if (!btn.dataset.selectionLabelDefault) {
+    const current = (label.textContent || '').replace(/\s+/g, ' ').trim();
+    btn.dataset.selectionLabelDefault = !current || current === 'В подборе!' ? 'Добавить в подбор' : current;
+  }
+  return label;
+}
+
+function playSelectionAddedBurst(btn) {
+  ensureSelectionAddEffectStyles();
+  btn.classList.add('sg-selection-pulse');
+  window.setTimeout(() => btn.classList.remove('sg-selection-pulse'), SG_SELECTION_PULSE_MS);
+
+  const flash = document.createElement('span');
+  flash.className = 'sg-selection-flash-layer';
+  flash.setAttribute('aria-hidden', 'true');
+  btn.insertBefore(flash, btn.firstChild);
+  window.requestAnimationFrame(() => flash.classList.add('sg-selection-flash-on'));
+  window.setTimeout(() => flash.remove(), 400);
+
+  const reduce =
+    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const count = reduce ? 0 : 14;
+  const petals = [];
+  for (let i = 0; i < count; i += 1) {
+    const petal = document.createElement('span');
+    petal.className = 'sg-selection-petal';
+    const spread = -1.12 + (i / Math.max(1, count - 1)) * 2.24;
+    const angle = -Math.PI / 2 + spread * 0.58 + (Math.random() - 0.5) * 0.28;
+    const dist = 50 + Math.random() * 52;
+    const tx = Math.cos(angle) * dist;
+    const ty = Math.sin(angle) * dist;
+    const rot = ((i * 23 + Math.random() * 55) % 360) - 48;
+    petal.style.setProperty('--sg-tx', `${tx.toFixed(1)}px`);
+    petal.style.setProperty('--sg-ty', `${ty.toFixed(1)}px`);
+    petal.style.setProperty('--sg-p-r', `${rot.toFixed(1)}deg`);
+    btn.appendChild(petal);
+    petals.push(petal);
+  }
+  window.setTimeout(() => {
+    petals.forEach((p) => p.remove());
+  }, 820);
+}
+
+/**
+ * Название для блока «Подбор»: короче и без «ломаного» текста.
+ * 1) Убираем латинские/английские сорта в ASCII/типографских кавычках "…" / "…"
+ *    (русские названия в «ёлочках» не трогаем).
+ * 2) Если есть кириллица — отрезаем хвост латинского рода/вида (Cineraria maritima …).
+ * 3) Снимаем висячие кавычки после обрезки (баг «Роза … "»).
+ */
+function selectionDisplayNameForPodbor(name) {
+  const raw = String(name || '').trim();
+  let s = raw.replace(/\s+/g, ' ').trim();
+  if (!s) return s;
+
+  const countLat = (t) => (t.match(/[A-Za-z]/g) || []).length;
+  const countCyr = (t) => (t.match(/[\u0400-\u04FF]/g) || []).length;
+
+  const stripLatinInAsciiQuotes = (str) => {
+    let out = str;
+    let prev;
+    do {
+      prev = out;
+      out = out.replace(/\s*["\u201c\u201d]([^"\u201c\u201d]*?)["\u201c\u201d]\s*/g, (full, inner) => {
+        const t = inner.trim();
+        if (!t) return ' ';
+        const lat = countLat(t);
+        const cyr = countCyr(t);
+        if (lat === 0) return full;
+        if (cyr > 0 && cyr >= lat) return full;
+        if (lat >= 2 && lat >= cyr) return ' ';
+        if (cyr === 0 && lat >= 1) return ' ';
+        return full;
+      });
+      out = out.replace(/\s+/g, ' ').trim();
+    } while (out !== prev);
+    return out;
+  };
+
+  s = stripLatinInAsciiQuotes(s);
+  if (!s) return raw;
+
+  if (/[\u0400-\u04FF]/.test(s)) {
+    // Не отрезать «…" Hosta (ML)» по первому латинскому слову — иначе теряется (ML) С2/3;
+    // латиница сразу после закрывающей " / типографской кавычки не считаем хвостом бинома.
+    const re = /\s+[A-Z][a-z]{2,}\b/g;
+    let idx = -1;
+    let match = null;
+    while ((match = re.exec(s))) {
+      const prevChar = s[match.index - 1] || '';
+      if (!/[\u0022\u201c\u201d]/.test(prevChar)) {
+        idx = match.index;
+        break;
+      }
+    }
+    if (idx !== -1) s = s.slice(0, idx).trim();
+    // Дублирующее латинское имя рода перед скобкой: … "Frances" … Hosta (ML)
+    s = s.replace(/\s+[A-Z][a-z]{2,}\b(?=\s*\()/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  s = s
+    .replace(/^[\s"'„“‚‘\u201c\u201d\u201e]+/g, '')
+    .replace(/[\s"'„“‚‘\u201c\u201d\u201e]+$/g, '')
+    .trim();
+  s = s.replace(/"+$/g, '').replace(/^"+/g, '').trim();
+  s = s.replace(/\s+/g, ' ').trim();
+
+  // Каталог в ASCII/«типографских» кавычках держит англ. сорт; «ёлочки» для RU не трогаем
+  if (/[\u0400-\u04FF]/.test(s)) {
+    s = s.replace(/[\u0022\u201c\u201d]/g, '').replace(/\s+/g, ' ').trim();
+    // Остаток одного латинского слова (битые данные / незакрытая кавычка)
+    s = s.replace(/\s+[A-Z][a-z]{2,}\s*$/g, '').trim();
+  }
+
+  return s || raw;
+}
+
+/** Сброс битых имён вроде «Роза английская (William» после старой логики / обрезки. */
+function selectionRepairTruncatedRoseCardName(name) {
+  const n = String(name || '').replace(/\s+/g, ' ').trim();
+  if (!/^роза английская/i.test(n)) return n;
+  const closed = /\(\s*([^)]*)\)\s*$/.exec(n);
+  if (closed) {
+    const inner = closed[1].trim();
+    const lat = (inner.match(/[A-Za-z]/g) || []).length;
+    const cyr = (inner.match(/[\u0400-\u04FF]/g) || []).length;
+    if (inner && lat >= 3 && cyr === 0) return 'Роза английская';
+    return n;
+  }
+  if (/\(\s*[A-Za-z]/.test(n) && !/\)\s*$/.test(n)) return 'Роза английская';
+  return n;
+}
+
+function selectionSuffixFromDescription(description) {
+  const d = String(description || '').replace(/\s+/g, ' ').trim();
+  if (!d) return '';
+  let m = d.match(/\(([А-ЯЁа-яё][^)]{1,48})\)/);
+  if (m) return m[1].trim();
+  m = d.match(/«([^»]{2,48})»/);
+  if (m) return m[1].trim();
+  if (/[Вв]ильям\s+[Шш]експир/.test(d)) return 'Вильям Шекспир';
+  return '';
+}
+
+function selectionSuffixFromUrl(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  const parts = u.split('/').filter(Boolean);
+  const slug = parts[parts.length - 1] || '';
+  if (!slug) return '';
+  const rosePrefix = 'roza-angliyskaya-';
+  if (!slug.startsWith(rosePrefix)) return '';
+  let rest = slug.slice(rosePrefix.length);
+  rest = rest.replace(/-(s|r|p)\d+(?:-\d+)?$/i, '');
+  rest = rest.replace(/-kashpo-\d+(?:-\d+)?l?$/i, '');
+  rest = rest
+    .split('-')
+    .filter(Boolean)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ')
+    .trim();
+  if (!rest) return '';
+  return `(${rest})`;
+}
+
+function selectionFixAmbiguousName(item) {
+  const repaired = selectionRepairTruncatedRoseCardName(item && item.name);
+  const base = selectionDisplayNameForPodbor(repaired);
+  if (base.toLowerCase() !== 'роза английская') return base;
+  const suffix = selectionSuffixFromDescription(item && item.description) || selectionSuffixFromUrl(item && item.url);
+  if (!suffix) return base;
+  return `${base} ${suffix}`;
+}
+
+function initCatalogSelection() {
+  const STORAGE_KEY = 'sg_catalog_selection_v2';
+  const LEGACY_STORAGE_KEY = 'sg_catalog_selection_v1';
+  const addButtons = Array.from(document.querySelectorAll('[data-selection-add]'));
+  const panels = Array.from(document.querySelectorAll('[data-selection-panel]'));
+  if (!addButtons.length && !panels.length) return;
+  addButtons.forEach((b) => ensureSelectionButtonLabel(b));
+  let memorySelection = [];
+
+  const parseSelection = () => {
+    try {
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      raw = raw || '[]';
+      const parsed = JSON.parse(raw);
+      const arr = Array.isArray(parsed) ? parsed : [];
+      const migrated = arr.map((item) => {
+        const rawStep = item && item.qtyStep;
+        const qtyStep =
+          typeof rawStep === 'number' && Number.isFinite(rawStep) && rawStep >= 2 ? Math.floor(rawStep) : 1;
+        let qty = typeof item.qty === 'number' && item.qty >= 1 ? Math.floor(item.qty) : qtyStep >= 2 ? qtyStep : 1;
+        if (qtyStep >= 2 && qty % qtyStep !== 0) {
+          qty = Math.max(qtyStep, Math.ceil(qty / qtyStep) * qtyStep);
+        }
+        return {
+          ...item,
+          qty,
+          qtyStep,
+          name: selectionFixAmbiguousName(item),
+        };
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+      } catch (e2) {
+        // ignore quota / privacy mode
+      }
+      return migrated;
+    } catch (e) {
+      return memorySelection;
+    }
+  };
+
+  let selection = parseSelection();
+  let noticeEl = null;
+
+  const normalizeText = (value) => (value || '').replace(/\s+/g, ' ').trim();
+  const fallbackId = (btn) => {
+    const name = normalizeText(btn.getAttribute('data-selection-name')) || 'item';
+    return `item-${name.toLowerCase().replace(/[^a-zа-я0-9]+/gi, '-')}`;
+  };
+
+  const readItem = (btn) => {
+    const itemId = normalizeText(btn.getAttribute('data-selection-id')) || fallbackId(btn);
+    const variant = normalizeText(btn.getAttribute('data-selection-variant'));
+    const rawName = normalizeText(btn.getAttribute('data-selection-name'));
+    const shortName = selectionFixAmbiguousName({
+      name: rawName,
+      description: normalizeText(btn.getAttribute('data-selection-description')),
+      url: btn.getAttribute('data-selection-url') || '',
+    }) || rawName || 'Позиция каталога';
+    const rawStep = normalizeText(btn.getAttribute('data-selection-qty-step'));
+    const parsedStep = parseInt(rawStep, 10);
+    const qtyStep = Number.isFinite(parsedStep) && parsedStep >= 2 ? parsedStep : 1;
+    const qty = qtyStep >= 2 ? qtyStep : 1;
+    return {
+      id: itemId,
+      name: shortName,
+      category: normalizeText(btn.getAttribute('data-selection-category')),
+      description: normalizeText(btn.getAttribute('data-selection-description')),
+      price: normalizeText(btn.getAttribute('data-selection-price')),
+      image: btn.getAttribute('data-selection-image') || '',
+      url: btn.getAttribute('data-selection-url') || '',
+      variant,
+      note: variant ? `Вариант: ${variant}` : '',
+      qty,
+      qtyStep,
+    };
+  };
+
+  const save = () => {
+    memorySelection = [...selection];
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(selection));
+    } catch (e) {
+      // localStorage can be unavailable in private mode or strict privacy settings.
+    }
+  };
+  const hasItem = (id) => selection.some((x) => x.id === id);
+
+  const closeNotice = () => {
+    if (!noticeEl) return;
+    noticeEl.remove();
+    noticeEl = null;
+  };
+
+  const panelForAddButton = (btn) => {
+    if (!panels.length) return null;
+    if (panels.length === 1) return panels[0];
+    const root = btn.closest('main') || document.body;
+    const local = panels.filter((p) => root.contains(p));
+    if (local.length === 1) return local[0];
+    const after = local.filter((p) => btn.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return after[0] || local[local.length - 1] || panels[0];
+  };
+
+  const showAddedNotice = (fromButton) => {
+    closeNotice();
+    const panel = fromButton ? panelForAddButton(fromButton) : panels[0];
+    noticeEl = document.createElement('div');
+    noticeEl.className = 'fixed bottom-4 left-4 right-4 z-[80] md:left-auto md:right-6 md:w-[28rem]';
+    noticeEl.innerHTML = `
+      <div class="rounded-2xl border border-brand/20 bg-white p-4 shadow-[0_18px_40px_-22px_rgba(15,23,42,0.45)]">
+        <div class="text-base font-semibold text-slate-900">Товар успешно добавлен в подбор!</div>
+        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button type="button" data-selection-notice-go class="rounded-xl bg-gradient-to-r from-brand to-brand2 px-4 py-2.5 text-sm font-semibold text-white hover:brightness-105 transition">Перейти в подбор</button>
+          <button type="button" data-selection-notice-close class="rounded-xl border border-black/10 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-black/5 transition">Продолжить просмотр каталога</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(noticeEl);
+
+    const goBtn = noticeEl.querySelector('[data-selection-notice-go]');
+    const closeBtn = noticeEl.querySelector('[data-selection-notice-close]');
+    goBtn?.addEventListener('click', () => {
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      closeNotice();
+    });
+    closeBtn?.addEventListener('click', closeNotice);
+    window.setTimeout(() => {
+      closeNotice();
+    }, 6000);
+  };
+
+  const syncAddButtons = () => {
+    addButtons.forEach((btn) => {
+      const id = normalizeText(btn.getAttribute('data-selection-id')) || fallbackId(btn);
+      const active = hasItem(id);
+      if (btn.dataset.selectionAnimating === '1') {
+        if (!active) delete btn.dataset.selectionAnimating;
+        else return;
+      }
+      const label = ensureSelectionButtonLabel(btn);
+      label.textContent = active ? 'В подборе!' : btn.dataset.selectionLabelDefault || 'Добавить в подбор';
+      btn.classList.toggle('whitespace-nowrap', active);
+      btn.classList.toggle('opacity-80', active);
+    });
+  };
+
+  const selectionTotalUnits = () =>
+    selection.reduce((acc, item) => acc + (typeof item.qty === 'number' && item.qty >= 1 ? item.qty : 1), 0);
+
+  const composeModalTitle = () => {
+    if (!selection.length) return 'Уточнить наличие';
+    const u = selectionTotalUnits();
+    if (u > selection.length) return `Позиций в подборе → ${selection.length} · ${u} шт.`;
+    return `Позиций в подборе → ${selection.length}`;
+  };
+
+  const escapeHtml = (text) =>
+    String(text || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+  const renderPanels = () => {
+    panels.forEach((panel) => {
+      const countEl = panel.querySelector('[data-selection-count]');
+      const emptyEl = panel.querySelector('[data-selection-empty]');
+      const listEl = panel.querySelector('[data-selection-list]');
+      const submitBtn = panel.querySelector('[data-selection-submit]');
+      if (!listEl || !submitBtn) return;
+
+      if (countEl) {
+        const u = selectionTotalUnits();
+        countEl.textContent = u > selection.length ? `${selection.length} · ${u} шт.` : String(selection.length);
+      }
+      submitBtn.disabled = selection.length === 0;
+      submitBtn.setAttribute('data-modal-title', composeModalTitle());
+      const namesForModal = selection.map((item) => {
+        const n = (item.name || '').trim();
+        const q = typeof item.qty === 'number' && item.qty > 1 ? item.qty : 0;
+        const base = item.variant ? `${n} (${item.variant})` : n;
+        return q ? `${base} ×${q}` : base;
+      });
+      // Короткий контекст для TITLE/UI; полный список летит в COMMENTS через data-modal-selection-names.
+      submitBtn.setAttribute(
+        'data-modal-context',
+        namesForModal.length ? `Подбор из каталога (${namesForModal.length})` : 'Уточнить наличие'
+      );
+      submitBtn.setAttribute('data-modal-selection-names', JSON.stringify(namesForModal.slice(0, 24)));
+      if (emptyEl) emptyEl.classList.toggle('hidden', selection.length > 0);
+
+      listEl.innerHTML = '';
+      selection.forEach((item) => {
+        const displayName = (item.name || '').trim();
+        const qty = typeof item.qty === 'number' && item.qty >= 1 ? item.qty : 1;
+        const card = document.createElement('article');
+        card.className = 'rounded-2xl border border-black/10 bg-white p-4 h-full min-h-[20rem] flex flex-col';
+        const imageHtml = item.image
+          ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(displayName)}" class="h-full w-full object-cover" loading="lazy" decoding="async" />`
+          : '<div class="h-full w-full bg-slate-100"></div>';
+        const categoryHtml = item.category
+          ? `<div class="mt-2 text-xs text-slate-500">${escapeHtml(item.category)}</div>`
+          : '<div class="mt-2 text-xs text-transparent select-none">.</div>';
+        const noteHtml = item.note
+          ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(item.note)}</div>`
+          : '';
+        const priceHtml = item.price
+          ? `<div class="mt-2 text-sm font-semibold text-brand">${escapeHtml(item.price)}</div>`
+          : '<div class="mt-2 text-sm text-transparent select-none">.</div>';
+        const link = item.url
+          ? `<a href="${escapeHtml(item.url)}" class="inline-flex items-center text-sm font-semibold text-brand hover:text-brand2">Подробнее</a>`
+          : '<span></span>';
+        const qtyHtml = `<div class="mt-3 flex items-center gap-2">
+            <span class="text-xs text-slate-500">Кол-во</span>
+            <button type="button" data-selection-qty-dec="${escapeHtml(item.id)}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 text-lg font-medium text-slate-700 hover:bg-black/5 transition" aria-label="Минус">−</button>
+            <span data-selection-qty-label="${escapeHtml(item.id)}" class="min-w-[1.5rem] text-center text-sm font-semibold text-slate-900">${qty}</span>
+            <button type="button" data-selection-qty-inc="${escapeHtml(item.id)}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/10 text-lg font-medium text-slate-700 hover:bg-black/5 transition" aria-label="Плюс">+</button>
+          </div>`;
+        card.innerHTML = `
+          <div class="h-28 overflow-hidden rounded-xl bg-slate-100">${imageHtml}</div>
+          <div class="mt-3 text-lg font-semibold min-h-[5.5rem]">${escapeHtml(displayName)}</div>
+          <div class="min-h-[4.5rem]">
+            ${categoryHtml}
+            ${noteHtml}
+            ${priceHtml}
+            ${qtyHtml}
+          </div>
+          <div class="mt-auto pt-3 flex items-end justify-between gap-3">
+            ${link}
+            <button type="button" data-selection-remove="${escapeHtml(item.id)}" class="rounded-xl border border-black/10 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-black/5 transition">Удалить</button>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    });
+  };
+
+  document.addEventListener('click', (e) => {
+    const incBtn = e.target && e.target.closest('[data-selection-qty-inc]');
+    const decBtn = e.target && e.target.closest('[data-selection-qty-dec]');
+    if (incBtn || decBtn) {
+      const id = incBtn ? incBtn.getAttribute('data-selection-qty-inc') : decBtn.getAttribute('data-selection-qty-dec');
+      const idx = selection.findIndex((x) => x.id === id);
+      if (idx < 0) return;
+      const stepRaw = selection[idx].qtyStep;
+      const step = typeof stepRaw === 'number' && Number.isFinite(stepRaw) && stepRaw >= 2 ? stepRaw : 1;
+      const cur = typeof selection[idx].qty === 'number' && selection[idx].qty >= 1 ? selection[idx].qty : step;
+      if (incBtn) {
+        selection[idx] = { ...selection[idx], qty: cur + step };
+      } else if (cur <= step) {
+        selection = selection.filter((x) => x.id !== id);
+      } else {
+        selection[idx] = { ...selection[idx], qty: cur - step };
+      }
+      save();
+      syncAddButtons();
+      renderPanels();
+      return;
+    }
+    const removeBtn = e.target && e.target.closest('[data-selection-remove]');
+    if (!removeBtn) return;
+    const id = removeBtn.getAttribute('data-selection-remove');
+    selection = selection.filter((x) => x.id !== id);
+    save();
+    syncAddButtons();
+    renderPanels();
+  });
+
+  /**
+   * Добавить/обновить позицию в подборе по кнопке data-selection-add и открыть форму «Позиций в подборе»
+   * (тот же поток, что и у «Уточнить наличие» после renderPanels).
+   */
+  window.SGOpenPodborInquiryFromButton = (btn) => {
+    if (!btn || typeof btn.matches !== 'function' || !btn.matches('[data-selection-add]')) return;
+    const item = readItem(btn);
+    const idx = selection.findIndex((x) => x.id === item.id);
+    if (idx < 0) {
+      selection = [...selection, item];
+    } else {
+      selection[idx] = { ...selection[idx], ...item };
+    }
+    save();
+    syncAddButtons();
+    renderPanels();
+    const panel = panelForAddButton(btn);
+    const submitBtn = panel && panel.querySelector('[data-selection-submit]');
+    if (!submitBtn || typeof window.SGOpenModal !== 'function') return;
+    const key = submitBtn.getAttribute('data-open-modal');
+    if (!key) return;
+    const title = submitBtn.getAttribute('data-modal-title') || '';
+    const noOverlay = submitBtn.getAttribute('data-modal-no-overlay') === '1';
+    const contextTitle = submitBtn.getAttribute('data-modal-context') || title;
+    let selectionNames = [];
+    try {
+      const rawNames = submitBtn.getAttribute('data-modal-selection-names');
+      const parsed = rawNames ? JSON.parse(rawNames) : [];
+      selectionNames = Array.isArray(parsed) ? parsed.map((x) => String(x || '').trim()).filter(Boolean) : [];
+    } catch (e) {
+      selectionNames = [];
+    }
+    window.SGOpenModal(key, title, { noOverlay, contextTitle, selectionNames });
+  };
+
+  addButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.selectionAnimating === '1') return;
+      const item = readItem(btn);
+      const exists = hasItem(item.id);
+      if (!exists) {
+        btn.dataset.selectionAnimating = '1';
+        selection = [...selection, item];
+        save();
+        const label = ensureSelectionButtonLabel(btn);
+        label.textContent = 'В подборе!';
+        btn.classList.add('whitespace-nowrap', 'opacity-80');
+        renderPanels();
+        playSelectionAddedBurst(btn);
+        showAddedNotice(btn);
+        window.setTimeout(() => {
+          delete btn.dataset.selectionAnimating;
+          syncAddButtons();
+        }, SG_SELECTION_ADD_ANIM_MS);
+        return;
+      }
+      const idx = selection.findIndex((x) => x.id === item.id);
+      if (idx >= 0) {
+        const stepRaw = selection[idx].qtyStep;
+        const step = typeof stepRaw === 'number' && Number.isFinite(stepRaw) && stepRaw >= 2 ? stepRaw : 1;
+        const cur = typeof selection[idx].qty === 'number' && selection[idx].qty >= 1 ? selection[idx].qty : step;
+        selection[idx] = { ...selection[idx], qty: cur + step };
+        save();
+        renderPanels();
+        playSelectionAddedBurst(btn);
+        showAddedNotice(btn);
+      }
+    });
+  });
+
+  syncAddButtons();
+  renderPanels();
+}
+
+/** Справочная таблица форматов тары: страницы категорий каталога (#sg-packaging-formats-dialog, data-packaging-formats-open). */
+function initPackagingFormatsDialog() {
+  const dlg = document.getElementById('sg-packaging-formats-dialog');
+  if (!dlg || dlg.dataset.sgPackagingBound === '1') return;
+  dlg.dataset.sgPackagingBound = '1';
+
+  let suppressOpenerUntil = 0;
+
+  const forceClose = () => {
+    suppressOpenerUntil = performance.now() + 450;
+    if (dlg.open) dlg.close();
+  };
+
+  const closeBtn = dlg.querySelector('[data-packaging-formats-close]');
+  if (closeBtn) {
+    closeBtn.addEventListener(
+      'pointerdown',
+      (e) => {
+        e.stopPropagation();
+      },
+      true
+    );
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      forceClose();
+    });
+  }
+
+  dlg.addEventListener('click', (e) => {
+    if (e.target !== dlg) return;
+    e.preventDefault();
+    e.stopPropagation();
+    forceClose();
+  });
+
+  /* capture: true — срабатывает до всплытия; на Pages не теряется из‑за чужих обработчиков */
+  document.addEventListener(
+    'click',
+    (e) => {
+      const opener = e.target.closest('[data-packaging-formats-open]');
+      if (!opener) return;
+      if (performance.now() < suppressOpenerUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (dlg.contains(opener)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (dlg.open) return;
+      try {
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+        else if (typeof dlg.show === 'function') dlg.show();
+      } catch (err) {
+        try {
+          if (typeof dlg.show === 'function') dlg.show();
+        } catch (e2) {
+          console.warn('Packaging dialog open failed', e2);
+        }
+      }
+    },
+    true
+  );
+}
+
+/**
+ * Полоска дат календаря: sticky top должен совпадать с высотой #site-header.
+ * Иначе шапка (z-50) визуально/по hit-test перекрывает ряд (z-40, top=4.5rem) — клики «пропадают».
+ */
+function syncCalendarTimelineHeaderOffset() {
+  const header = document.getElementById('site-header');
+  const bars = document.querySelectorAll('[data-sg-calendar-timeline]');
+  if (!header || !bars.length) return;
+
+  const apply = () => {
+    const px = Math.max(56, Math.ceil(header.getBoundingClientRect().height));
+    bars.forEach((bar) => {
+      bar.style.top = `${px}px`;
+    });
+  };
+
+  apply();
+  let resizeT = null;
+  window.addEventListener('resize', () => {
+    window.clearTimeout(resizeT);
+    resizeT = window.setTimeout(apply, 120);
+  });
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => apply());
+    ro.observe(header);
+  }
+}
+
+/* ── Calendar timeline: auto-highlight current period ── */
+function initTimeline() {
+  syncCalendarTimelineHeaderOffset();
+
+  const pills = document.querySelectorAll('.timeline-pill');
+  if (!pills.length) return;
+
+  const now = new Date();
+  const monthNames = {
+    'январ':0,'феврал':1,'март':2,'апрел':3,'ма':4,'май':4,
+    'июн':5,'июл':6,'август':7,'сентябр':8,'октябр':9,'ноябр':10,'декабр':11
+  };
+
+  function parseDate(text) {
+    const m = text.match(/(\d+)\s+(\S+?)\s*[–—-]\s*(\d+)\s+(\S+)/);
+    if (!m) {
+      const m2 = text.match(/(\d+)\s*[–—-]\s*(\d+)\s+(\S+)/);
+      if (!m2) return null;
+      const month = Object.entries(monthNames).find(([k]) => m2[3].toLowerCase().startsWith(k));
+      if (!month) return null;
+      return {
+        start: new Date(now.getFullYear(), month[1], parseInt(m2[1])),
+        end: new Date(now.getFullYear(), month[1], parseInt(m2[2]))
+      };
+    }
+    const sm = Object.entries(monthNames).find(([k]) => m[2].toLowerCase().startsWith(k));
+    const em = Object.entries(monthNames).find(([k]) => m[4].toLowerCase().startsWith(k));
+    if (!sm || !em) return null;
+    return {
+      start: new Date(now.getFullYear(), sm[1], parseInt(m[1])),
+      end: new Date(now.getFullYear(), em[1], parseInt(m[3]))
+    };
+  }
+
+  let activePill = null;
+  pills.forEach(pill => {
+    const range = parseDate(pill.dataset.period || pill.textContent);
+    if (range && now >= range.start && now <= range.end) {
+      pill.classList.remove('bg-white', 'border-black/10');
+      pill.classList.add('bg-brand', 'text-white', 'border-brand');
+      activePill = pill;
+    }
+  });
+
+  if (activePill) {
+    activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+    // Страница растения: пилюли — якоря #period-N. Прокручиваем к карточке
+    // текущего периода, чтобы человек из дайджеста попадал сразу на актуальную
+    // работу недели, а не в начало списка. Свой якорь в URL уважаем — не трогаем.
+    const anchor = activePill.getAttribute('href');
+    if (anchor && anchor.charAt(0) === '#' && !window.location.hash) {
+      const card = document.querySelector(anchor);
+      if (card) {
+        requestAnimationFrame(() => {
+          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    }
+  }
+
+  // Smooth scroll for anchor pills (plant page)
+  document.querySelectorAll('.timeline-pill[href^="#"]').forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(pill.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Period filter for button pills (main/category pages)
+  const filterPills = document.querySelectorAll('.timeline-pill:not([href])');
+  const plantCards = document.querySelectorAll('.plant-card');
+  if (filterPills.length) {
+    filterPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const period = pill.dataset.period;
+        const wasActive = pill.dataset.filterActive === 'true';
+
+        // Reset all pills to default (preserve current-period highlight)
+        filterPills.forEach(p => {
+          p.dataset.filterActive = 'false';
+          if (p.dataset.currentPeriod !== 'true') {
+            p.classList.remove('bg-brand', 'text-white', 'border-brand');
+            p.classList.add('bg-white', 'border-black/10');
+          } else {
+            p.classList.remove('ring-2', 'ring-brand/50');
+          }
+        });
+
+        if (wasActive) {
+          // Deselect — show all
+          plantCards.forEach(c => { c.style.display = ''; });
+        } else {
+          // Activate this pill
+          pill.dataset.filterActive = 'true';
+          pill.classList.remove('bg-white', 'border-black/10');
+          pill.classList.add('bg-brand', 'text-white', 'border-brand');
+          if (pill.dataset.currentPeriod === 'true') {
+            pill.classList.add('ring-2', 'ring-brand/50');
+          }
+          // Filter cards
+          let visibleCount = 0;
+          plantCards.forEach(c => {
+            const periods = (c.dataset.periods || '').split('||');
+            const match = periods.includes(period);
+            c.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+          });
+        }
+      });
+    });
+
+    // Mark current-period pills for preserving highlight
+    filterPills.forEach(pill => {
+      if (pill.classList.contains('bg-brand')) {
+        pill.dataset.currentPeriod = 'true';
+      }
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initYear();
+  initViewportHeroHeights();
+  initHomeHeroVideo();
+  initGazonHeroVideo();
+  initB2bHeroVideo();
+  initBurger();
+  initNavDropdowns();
+  initCatalogSearch();
+  initModal();
+  // Auto-open gazon calculator from URL: /gazon/?calc=1
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calc') === '1' && window.SGOpenModal) {
+      window.SGOpenModal('gazon_calc', 'Рассчитать стоимость');
+    }
+  } catch (e) {
+    // ignore
+  }
+  initAccordion();
+  initCatalogCategoryMobileAutoScroll();
+  initAnimations();
+  initCounters();
+  initBeforeAfterSliders();
+  initPitomnikGreenhouseSlider();
+  initSadovyeAssortmentSliders();
+  initZabotyExpertSlider();
+  initGazonCalculator();
+  initContactsYandexMap();
+  initConsentCheckboxes();
+  initCookieBanner();
+  initBitrix24Widget();
+  initAnalyticsClicks();
+  initPackagingFormatsDialog();
+  initCatalogSelection();
+  initPlantVariantPicker();
+  initTimeline();
+  initPlantGalleries();
+  initPlantCardCoverGallerySwap();
+  initPlantCardLightbox();
+  initImageSkeletons();
+  initCatalogNavMobileToggle();
+});
+
+// ── Plant image galleries ──
+function initPlantGalleries() {
+  document.querySelectorAll('[data-gallery]').forEach(function (gallery) {
+    var mainWrap = gallery.querySelector('[data-gallery-main]');
+    var mainImg = mainWrap ? mainWrap.querySelector('img') : null;
+    var thumbs = gallery.querySelectorAll('[data-gallery-thumb]');
+    var srcs = [];
+
+    gallery.querySelectorAll('[data-gallery-src]').forEach(function (el) {
+      srcs.push(el.textContent.trim());
+    });
+
+    if (!mainImg || srcs.length < 2) return;
+
+    var current = 0;
+
+    function show(idx) {
+      if (idx === current) return;
+      mainImg.style.opacity = '0';
+      setTimeout(function () {
+        mainImg.src = srcs[idx];
+        mainImg.style.opacity = '1';
+      }, 150);
+      thumbs.forEach(function (t) {
+        var i = parseInt(t.getAttribute('data-gallery-thumb'), 10);
+        if (i === idx) {
+          t.classList.remove('ring-transparent', 'hover:ring-brand/40');
+          t.classList.add('ring-brand');
+        } else {
+          t.classList.remove('ring-brand');
+          t.classList.add('ring-transparent', 'hover:ring-brand/40');
+        }
+      });
+      current = idx;
+    }
+
+    thumbs.forEach(function (thumb) {
+      thumb.addEventListener('click', function () {
+        show(parseInt(thumb.getAttribute('data-gallery-thumb'), 10));
+      });
+    });
+
+    // Click main image → next
+    mainWrap.addEventListener('click', function () {
+      show((current + 1) % srcs.length);
+    });
+  });
+}
+
+/** Карточка растения: клик по миниатюре галереи меняет местами src с главным фото (только просмотр). */
+function initPlantCardCoverGallerySwap() {
+  document.querySelectorAll('[data-plant-photo-swap]').forEach(function (root) {
+    var main = root.querySelector('[data-plant-main-cover]');
+    var thumbs = root.querySelectorAll('[data-plant-gallery-thumb]');
+    if (!main || !thumbs.length) return;
+
+    thumbs.forEach(function (thumb) {
+      thumb.setAttribute('role', 'button');
+      if (!thumb.hasAttribute('tabindex')) thumb.setAttribute('tabindex', '0');
+
+      function swap() {
+        var ms = main.getAttribute('src');
+        var ts = thumb.getAttribute('src');
+        if (!ms || !ts) return;
+        main.setAttribute('src', ts);
+        thumb.setAttribute('src', ms);
+        var ma = main.getAttribute('alt') || '';
+        var ta = thumb.getAttribute('alt') || '';
+        main.setAttribute('alt', ta);
+        thumb.setAttribute('alt', ma);
+      }
+
+      thumb.addEventListener('click', function (e) {
+        e.preventDefault();
+        swap();
+      });
+      thumb.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          swap();
+        }
+      });
+    });
+  });
+}
+
+/** Карточка растения: лайтбокс по клику на главное фото. Навигация по всем фото (главное + галерея),
+ *  стрелки, Esc, клик по подложке. Список фото собирается в момент открытия (учитывает swap миниатюр). */
+function initPlantCardLightbox() {
+  var root = document.querySelector('[data-plant-photo-swap]');
+  if (!root) return;
+  var main = root.querySelector('[data-plant-main-cover]');
+  if (!main) return;
+
+  var svgChevL =
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+  var svgChevR =
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+
+  var lb = document.createElement('div');
+  lb.className = 'sg-photo-lightbox';
+  lb.setAttribute('role', 'dialog');
+  lb.setAttribute('aria-modal', 'false');
+  lb.setAttribute('aria-hidden', 'true');
+  lb.setAttribute('aria-label', 'Просмотр фото растения');
+  lb.innerHTML = [
+    '<div class="sg-photo-lightbox__backdrop" data-plant-lb-backdrop></div>',
+    '<div class="sg-photo-lightbox__surface">',
+    '<div class="sg-photo-lightbox__img-wrap">',
+    '<img class="sg-photo-lightbox__img" data-plant-lb-img alt="" />',
+    '</div>',
+    '<button type="button" class="sg-photo-lightbox__close" data-plant-lb-close aria-label="Закрыть">&times;</button>',
+    '<button type="button" class="sg-photo-lightbox__nav sg-photo-lightbox__nav--prev" data-plant-lb-prev aria-label="Предыдущее фото">',
+    svgChevL,
+    '</button>',
+    '<button type="button" class="sg-photo-lightbox__nav sg-photo-lightbox__nav--next" data-plant-lb-next aria-label="Следующее фото">',
+    svgChevR,
+    '</button>',
+    '</div>',
+  ].join('');
+  document.body.appendChild(lb);
+
+  var backdrop = lb.querySelector('[data-plant-lb-backdrop]');
+  var lbImg = lb.querySelector('[data-plant-lb-img]');
+  var btnClose = lb.querySelector('[data-plant-lb-close]');
+  var btnPrev = lb.querySelector('[data-plant-lb-prev]');
+  var btnNext = lb.querySelector('[data-plant-lb-next]');
+
+  var photos = [];
+  var lbIndex = 0;
+  var lbOpen = false;
+  var bodyOverflowPrev = '';
+
+  function collectPhotos() {
+    var imgs = [main];
+    root.querySelectorAll('[data-plant-gallery-thumb]').forEach(function (t) {
+      imgs.push(t);
+    });
+    var out = [];
+    imgs.forEach(function (img) {
+      var src = img.getAttribute('src');
+      if (src) out.push({ src: src, alt: img.getAttribute('alt') || '' });
+    });
+    return out;
+  }
+
+  function paintLb() {
+    var d = photos[lbIndex];
+    if (!d || !lbImg) return;
+    lbImg.src = d.src;
+    lbImg.alt = d.alt;
+  }
+
+  function closeLb() {
+    if (!lbOpen) return;
+    lbOpen = false;
+    lb.classList.remove('is-open');
+    lb.setAttribute('aria-hidden', 'true');
+    lb.setAttribute('aria-modal', 'false');
+    document.body.style.overflow = bodyOverflowPrev;
+    document.removeEventListener('keydown', onLbKeydown);
+  }
+
+  function openLb() {
+    photos = collectPhotos();
+    if (!photos.length) return;
+    var currentSrc = main.getAttribute('src');
+    lbIndex = 0;
+    photos.forEach(function (d, idx) {
+      if (d.src === currentSrc) lbIndex = idx;
+    });
+    var single = photos.length < 2;
+    if (btnPrev) btnPrev.classList.toggle('is-hidden', single);
+    if (btnNext) btnNext.classList.toggle('is-hidden', single);
+    paintLb();
+    lbOpen = true;
+    lb.classList.add('is-open');
+    lb.setAttribute('aria-hidden', 'false');
+    lb.setAttribute('aria-modal', 'true');
+    bodyOverflowPrev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onLbKeydown);
+  }
+
+  function stepLb(delta) {
+    if (!photos.length) return;
+    lbIndex = (lbIndex + delta + photos.length) % photos.length;
+    paintLb();
+  }
+
+  function onLbKeydown(e) {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      e.preventDefault();
+      closeLb();
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      stepLb(-1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      stepLb(1);
+    }
+  }
+
+  main.addEventListener('click', function () {
+    openLb();
+  });
+  backdrop?.addEventListener('click', function () {
+    closeLb();
+  });
+  btnClose?.addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeLb();
+  });
+  btnPrev?.addEventListener('click', function (e) {
+    e.stopPropagation();
+    stepLb(-1);
+  });
+  btnNext?.addEventListener('click', function (e) {
+    e.stopPropagation();
+    stepLb(1);
+  });
+}
+
+/** Каталог: shimmer-скелетон фото. Контейнер помечен data-img-skeleton; когда img загрузилась
+ *  (или загрузка не удалась, или img в контейнере нет) - вешаем is-loaded: плейсхолдер гаснет, фото проявляется. */
+function initImageSkeletons() {
+  document.querySelectorAll('[data-img-skeleton]').forEach(function (box) {
+    var img = box.querySelector('img');
+    function markLoaded() {
+      box.classList.add('is-loaded');
+    }
+    if (!img) {
+      markLoaded();
+      return;
+    }
+    if (img.complete) {
+      markLoaded();
+      return;
+    }
+    img.addEventListener('load', markLoaded, { once: true });
+    img.addEventListener('error', markLoaded, { once: true });
+  });
+}
+
+/** Сайдбар каталога: на экранах < lg (1024px) шапка «Каталог / Разделы» работает тогглом,
+ *  список разделов по умолчанию свёрнут (классы hidden lg:block в партиале). На lg+ всегда развёрнут через CSS. */
+function initCatalogNavMobileToggle() {
+  var mqDesktop = window.matchMedia('(min-width: 1024px)');
+  document.querySelectorAll('[data-catalog-nav-card]').forEach(function (card) {
+    var btn = card.querySelector('[data-catalog-nav-toggle]');
+    var panel = card.querySelector('[data-catalog-nav-panel]');
+    if (!btn || !panel) return;
+
+    btn.addEventListener('click', function () {
+      if (mqDesktop.matches) return; // на lg+ список всегда виден (lg:block), тоггл не нужен
+      var open = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      // Стрелку ищем в момент клика: lucide заменяет <i> на <svg>, сохраняя data-атрибут
+      var chevron = card.querySelector('[data-catalog-nav-chevron]');
+      if (chevron) chevron.classList.toggle('rotate-180', open);
+    });
+  });
+}
+
+(function initPromoPopup() {
+  var STORAGE_KEY = 'sg_promo_popup_3_sale50_jul2026';
+  var SHOW_DELAY_MS = 2000;
+  var EXCLUDED_PATHS = ['/sadovye-centry/', '/discount/', '/zayavka-direct/', '/akciya-hvoynye-50/', '/direct-50/'];
+  var EXPIRES_AT = new Date(2026, 7, 1); // акция до конца июля: с 1 августа не показываем
+  var HIDE_FOR_MS = 24 * 60 * 60 * 1000; // после закрытия прячем на сутки
+
+  function ready(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else {
+      fn();
+    }
+  }
+
+  ready(function () {
+    var popup = document.getElementById('promoPopup');
+    if (!popup) return;
+
+    if (new Date() >= EXPIRES_AT) return;
+
+    var path = location.pathname;
+    if (EXCLUDED_PATHS.some(function (p) { return path.indexOf(p) === 0; })) return;
+
+    try {
+      // старое значение '1' парсится в 1 (давно в прошлом), так что попап снова покажется
+      var closedAt = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      if (closedAt && Date.now() - closedAt < HIDE_FOR_MS) return;
+    } catch (e) { /* приватный режим — всё равно показываем */ }
+
+    var closers = popup.querySelectorAll('[data-promo-close]');
+    var ctaLinks = popup.querySelectorAll('[data-promo-action]');
+    var prevBodyOverflow = '';
+    var isOpen = false;
+
+    function open() {
+      if (isOpen) return;
+      isOpen = true;
+      popup.classList.add('is-open');
+      popup.setAttribute('aria-hidden', 'false');
+      prevBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', onKeydown);
+    }
+
+    function close(persist) {
+      if (!isOpen) return;
+      isOpen = false;
+      popup.classList.remove('is-open');
+      popup.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = prevBodyOverflow;
+      document.removeEventListener('keydown', onKeydown);
+      if (persist !== false) {
+        try { localStorage.setItem(STORAGE_KEY, String(Date.now())); } catch (e) { /* noop */ }
+      }
+    }
+
+    function onKeydown(e) {
+      if (e.key === 'Escape' || e.key === 'Esc') close(true);
+    }
+
+    closers.forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        close(true);
+      });
+    });
+
+    // Клик по CTA — закрываем и сохраняем, переход выполняется штатно
+    ctaLinks.forEach(function (link) {
+      link.addEventListener('click', function () {
+        close(true);
+      });
+    });
+
+    setTimeout(open, SHOW_DELAY_MS);
+  });
+})();
+
+// ── Посадочные страницы акции «-50%» (/akciya-hvoynye-50/, /direct-50/) ──
+// Собственный обработчик формы: POST на /api/promo/sale50/ (upsert контакта),
+// затем показ промокода В ЛЮБОМ СЛУЧАЕ (код не секретный, конверсию не теряем).
+// Цели Метрики разделены по источнику суффиксом _site / _direct.
+(function initPromoSale50() {
+  var ENDPOINT = '/api/promo/sale50/';
+  var METRIKA_ID = 108722541;
+  var TIMEOUT_MS = 6000;
+
+  function ready(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else {
+      fn();
+    }
+  }
+
+  ready(function () {
+    var page = document.querySelector('[data-promo-page]');
+    if (!page) return;
+
+    var source = page.getAttribute('data-promo-source') || 'site';
+    var code = page.getAttribute('data-promo-code') || '';
+    var lastFired = {};
+
+    function reachGoal(event) {
+      var goal = 'promo_' + event + '_' + source;
+      if (!window.ym) return;
+      var now = Date.now();
+      if (lastFired[goal] && now - lastFired[goal] < 1200) return;
+      lastFired[goal] = now;
+      try { ym(METRIKA_ID, 'reachGoal', goal); } catch (e) { /* noop */ }
+    }
+
+    function parseUtm() {
+      var utm = {};
+      try {
+        var sp = new URLSearchParams(window.location.search || '');
+        sp.forEach(function (v, k) {
+          if (k.toLowerCase().indexOf('utm_') === 0) utm[k.toLowerCase()] = v;
+        });
+      } catch (e) { /* noop */ }
+      return utm;
+    }
+
+    // Клики по CTA / телефону / маршруту (делегирование по всей странице акции).
+    page.addEventListener('click', function (e) {
+      var t = e.target && e.target.closest ? e.target : null;
+      if (!t) return;
+      if (t.closest('[data-promo-cta]')) reachGoal('cta');
+      if (t.closest('[data-promo-phone]')) reachGoal('phone');
+      if (t.closest('[data-promo-route]')) reachGoal('route');
+    });
+
+    var form = page.querySelector('[data-promo-form]');
+    var formWrap = page.querySelector('[data-promo-form-wrap]');
+    var successBox = page.querySelector('[data-promo-success]');
+    if (!form) return;
+
+    // Гейт согласия: кнопка активна только при отмеченном чекбоксе.
+    var checkbox = form.querySelector('[data-consent-checkbox]');
+    var submitBtn = form.querySelector('[data-consent-submit]');
+    if (checkbox && submitBtn) {
+      var syncBtn = function () {
+        submitBtn.disabled = !checkbox.checked;
+        submitBtn.classList.toggle('opacity-60', !checkbox.checked);
+      };
+      checkbox.addEventListener('change', syncBtn);
+      syncBtn();
+    }
+
+    // Начало заполнения формы - один раз.
+    var startFired = false;
+    form.addEventListener('input', function () {
+      if (startFired) return;
+      startFired = true;
+      reachGoal('form_start');
+    });
+
+    var postPromo = function (payload) {
+      var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS) : null;
+      return fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'same-origin',
+        signal: ctrl ? ctrl.signal : undefined,
+      }).then(function (resp) {
+        if (timer) clearTimeout(timer);
+        return resp.ok ? resp.json().catch(function () { return null; }) : null;
+      }).catch(function (err) {
+        if (timer) clearTimeout(timer);
+        console.warn('[promo] send failed:', err && err.message || err);
+        return null;
+      });
+    };
+
+    var showSuccess = function () {
+      if (formWrap) formWrap.classList.add('hidden');
+      if (successBox) {
+        successBox.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+        try { successBox.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { /* noop */ }
+      }
+      reachGoal('code_shown');
+    };
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var phoneInput = form.querySelector('input[name="phone"]');
+      var digits = phoneInput ? (phoneInput.value || '').replace(/\D/g, '') : '';
+      if (digits.length < 10) {
+        if (phoneInput) {
+          phoneInput.setCustomValidity('Введите номер телефона целиком - не менее 10 цифр.');
+          phoneInput.reportValidity();
+          phoneInput.addEventListener('input', function () { phoneInput.setCustomValidity(''); }, { once: true });
+        }
+        return;
+      }
+      if (phoneInput) phoneInput.setCustomValidity('');
+      if (checkbox && !checkbox.checked) {
+        checkbox.reportValidity && checkbox.reportValidity();
+        return;
+      }
+
+      var nameInput = form.querySelector('input[name="name"]');
+      var payload = {
+        name: nameInput ? (nameInput.value || '').trim() : '',
+        phone: phoneInput ? phoneInput.value.trim() : '',
+        consent: checkbox && checkbox.checked ? '1' : '',
+        source: source,
+        utm: parseUtm(),
+        pagePath: (window.location.pathname || '') || '/',
+      };
+
+      reachGoal('form_submit');
+
+      // Промокод показываем в любом случае - не ждём и не блокируем на ошибке бэка.
+      postPromo(payload);
+      showSuccess();
+    });
+
+    // Копирование промокода.
+    var copyBtn = page.querySelector('[data-promo-copy]');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var label = copyBtn.querySelector('[data-promo-copy-label]');
+        var done = function () {
+          if (label) label.textContent = 'Скопировано';
+          reachGoal('code_copy');
+          setTimeout(function () { if (label) label.textContent = 'Скопировать'; }, 2000);
+        };
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(done).catch(done);
+          } else {
+            var ta = document.createElement('textarea');
+            ta.value = code;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) { /* noop */ }
+            document.body.removeChild(ta);
+            done();
+          }
+        } catch (e) { done(); }
+      });
+    }
+  });
+})();
+
+(function initCentersWidget() {
+  var STORAGE_KEY = 'sg_centers_widget_closed';
+  var SHOW_DELAY_MS = 800;
+  var EXCLUDED_PATHS = ['/sadovye-centry/', '/discount/', '/zayavka-direct/', '/akciya-hvoynye-50/', '/direct-50/'];
+
+  function ready(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else {
+      fn();
+    }
+  }
+
+  ready(function () {
+    var widget = document.getElementById('centersWidget');
+    if (!widget) return;
+
+    var path = location.pathname;
+    if (EXCLUDED_PATHS.some(function (p) { return path.indexOf(p) === 0; })) return;
+
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === '1') return;
+    } catch (e) { /* noop */ }
+
+    var closers = widget.querySelectorAll('[data-centers-widget-close]');
+    var fab = widget.querySelector('[data-centers-widget-fab]');
+
+    function show() {
+      widget.classList.add('is-open');
+      widget.setAttribute('aria-hidden', 'false');
+    }
+
+    function hide() {
+      widget.classList.remove('is-open');
+      widget.classList.remove('is-expanded');
+      widget.setAttribute('aria-hidden', 'true');
+      try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) { /* noop */ }
+    }
+
+    function expand() {
+      widget.classList.add('is-expanded');
+    }
+
+    closers.forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        hide();
+      });
+    });
+
+    if (fab) {
+      fab.addEventListener('click', function (e) {
+        e.preventDefault();
+        expand();
+      });
+    }
+
+    setTimeout(show, SHOW_DELAY_MS);
+  });
+})();
+
+(function initCentersModal() {
+  function ready(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else {
+      fn();
+    }
+  }
+
+  ready(function () {
+    if (location.pathname.indexOf('/sadovye-centry/') !== 0) return;
+
+    var params;
+    try {
+      params = new URLSearchParams(location.search);
+    } catch (e) { return; }
+    if (params.get('show') !== 'centers') return;
+
+    var modal = document.getElementById('centersModal');
+    if (!modal) return;
+
+    var closers = modal.querySelectorAll('[data-centers-modal-close]');
+    var prevBodyOverflow = '';
+    var isOpen = false;
+
+    function open() {
+      if (isOpen) return;
+      isOpen = true;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      prevBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', onKeydown);
+      if (window.lucide) {
+        try { window.lucide.createIcons(); } catch (e) { /* noop */ }
+      }
+    }
+
+    function close() {
+      if (!isOpen) return;
+      isOpen = false;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = prevBodyOverflow;
+      document.removeEventListener('keydown', onKeydown);
+    }
+
+    function onKeydown(e) {
+      if (e.key === 'Escape' || e.key === 'Esc') close();
+    }
+
+    closers.forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        close();
+      });
+    });
+
+    open();
+
+    try {
+      history.replaceState({}, '', location.pathname + location.hash);
+    } catch (e) { /* noop */ }
+  });
+})();
+
+
+// ── Ленивые фоновые видео ────────────────────────────────────────────────────
+// <video data-lazy-video preload="none" poster="..."><source data-src="..."></video>
+// src подставляется только когда блок приближается к вьюпорту: страница не тянет
+// десятки мегабайт видео при первом заходе (критично для мобильных).
+(function () {
+  function init() {
+    var vids = document.querySelectorAll('video[data-lazy-video]');
+    if (!vids.length) return;
+
+    function load(v) {
+      var sources = v.querySelectorAll('source[data-src]');
+      for (var i = 0; i < sources.length; i++) {
+        sources[i].src = sources[i].getAttribute('data-src');
+        sources[i].removeAttribute('data-src');
+      }
+      if (!sources.length) return;
+      v.load();
+      var p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(function () { /* autoplay запрещён - остаётся постер */ });
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      vids.forEach(function (v) { load(v); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          load(entry.target);
+          io.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '300px' });
+    vids.forEach(function (v) { io.observe(v); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();

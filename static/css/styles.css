@@ -1,0 +1,849 @@
+/* Small custom styling on top of Tailwind */
+
+/* Шапка без Tailwind (CDN недоступен): не показывать десктоп+мобильный ряд одновременно */
+header#site-header .sg-nav-fallback-desktop {
+  display: none;
+}
+header#site-header .sg-nav-fallback-mobile-bar {
+  display: flex;
+}
+@media (min-width: 768px) {
+  header#site-header .sg-nav-fallback-desktop {
+    display: flex;
+  }
+  header#site-header .sg-nav-fallback-mobile-bar {
+    display: none;
+  }
+  header#site-header #mobileMenu.sg-mobile-menu-panel {
+    display: none !important;
+  }
+}
+header#site-header #mobileMenu.sg-mobile-menu-panel.hidden {
+  display: none;
+}
+header#site-header #mobileMenu.sg-mobile-menu-panel:not(.hidden) {
+  display: block;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+}
+
+/* Главная: hero-фон на всю ширину — подстраховка против preflight у video */
+section[data-home-hero] video.hero-bg-video {
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  /* Пока видео не играет — не показываем первый кадр из файла (часто «лишний» план); фон — bg-slate-900 у обёртки */
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+section[data-home-hero] video.hero-bg-video.is-home-hero-ready {
+  opacity: 1;
+}
+
+/* Hero video: preflight max-width:100% ломает cover — дублируем в CSS (и inline на теге) */
+video.hero-bg-video {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Видео в карточках на главной (не hero): тот же конфликт с preflight */
+video.sg-home-inline-video {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Карточки «Рулонный / посевной»: чуть резче апскейл на ретине (без «мыла» от сглаживания) */
+img.gazon-compare-img {
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Страница «Газон»: фон чуть больше блока + scale — убирает белую полоску (dvh/header + субпиксель у video) */
+section[data-gazon-hero] .gazon-hero-media {
+  position: absolute;
+  z-index: -1;
+  /* низ с большим запасом: на Pages без #site-header + JS щель заметнее */
+  inset: -16px -16px -48px -16px;
+  width: auto;
+  height: auto;
+  overflow: hidden;
+  background-color: #0f172a;
+}
+
+section[data-gazon-hero] .gazon-hero-media video.hero-bg-video {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  transform: translate3d(-50%, -50%, 0) scale(1.06);
+  object-fit: cover;
+  object-position: 50% 52%;
+  display: block;
+  /* Пока видео не играет — виден тот же кадр, что и poster (фон на .gazon-hero-media), без вспышки старого кадра из кэша */
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+section[data-gazon-hero] .gazon-hero-media video.hero-bg-video.is-gazon-hero-ready {
+  opacity: 1;
+}
+
+/* На случай 1px щели между hero и следующей секцией (белый body) */
+section[data-gazon-hero] {
+  box-shadow: inset 0 -2px 0 0 rgb(15, 23, 42);
+  background-color: #0f172a;
+}
+
+/* Страница B2B: hero-фон — видео (как у «Газон»: cover, scale, без щели снизу) */
+section[data-b2b-hero] .b2b-hero-media {
+  position: absolute;
+  z-index: -1;
+  inset: -16px -16px -48px -16px;
+  width: auto;
+  height: auto;
+  overflow: hidden;
+  background-color: #0f172a;
+}
+
+section[data-b2b-hero] .b2b-hero-media video.hero-bg-video {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  transform: translate3d(-50%, -50%, 0) scale(1.06);
+  object-fit: cover;
+  object-position: 50% 50%;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+section[data-b2b-hero] .b2b-hero-media video.hero-bg-video.is-b2b-hero-ready {
+  opacity: 1;
+}
+
+section[data-b2b-hero] {
+  box-shadow: inset 0 -2px 0 0 rgb(15, 23, 42);
+  background-color: #0f172a;
+}
+
+/* Садовые центры: тот же приём, что у «Газон» / B2B — без белой щели снизу у hero */
+section[data-sadovye-centry-hero] {
+  box-shadow: inset 0 -2px 0 0 rgb(15, 23, 42);
+  background-color: #0f172a;
+}
+
+/* Служба заботы: градиентный hero — подложка + полоска снизу, как у видео-hero (щель body / dvh / субпиксель) */
+section[data-zaboty-hero] {
+  box-shadow: inset 0 -3px 0 0 rgb(15, 23, 42);
+  background-color: rgb(15, 23, 42);
+}
+
+/* Кнопка «Служба заботы» в шапке — без глобального сдвига как у rounded-2xl ссылок */
+a.nav-zaboty-pill {
+  transform: none;
+}
+a.nav-zaboty-pill:hover {
+  transform: none;
+}
+a.nav-zaboty-pill:active {
+  transform: none;
+}
+
+/* Modal open animation */
+.modal-enter {
+  animation: modalEnter 220ms ease-out both;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Footer year */
+#year {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Global button animations */
+button,
+a.rounded-2xl,
+a.rounded-xl {
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    filter 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
+  will-change: transform;
+}
+
+button:hover,
+a.rounded-2xl:hover,
+a.rounded-xl:hover {
+  transform: translateY(-2px);
+}
+
+button:active,
+a.rounded-2xl:active,
+a.rounded-xl:active {
+  transform: translateY(0) scale(0.98);
+}
+
+button:focus-visible,
+a.rounded-2xl:focus-visible,
+a.rounded-xl:focus-visible {
+  outline: 2px solid rgba(64, 145, 108, 0.45);
+  outline-offset: 2px;
+}
+
+/* Slightly stronger glow for already highlighted CTAs */
+button.shadow-glow:hover,
+a.shadow-glow:hover {
+  box-shadow:
+    0 0 0 1px rgba(64, 145, 108, 0.35),
+    0 18px 36px rgba(45, 106, 79, 0.25);
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a.rounded-2xl,
+  a.rounded-xl {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* Питомник: полноэкранный просмотр фото тепличного комбината (JS вешает на body — вне transform у карточки) */
+.pitomnik-greenhouse-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: none;
+  box-sizing: border-box;
+}
+.pitomnik-greenhouse-lightbox.is-open {
+  display: block;
+}
+.pitomnik-greenhouse-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  cursor: pointer;
+}
+.pitomnik-greenhouse-lightbox__surface {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+}
+.pitomnik-greenhouse-lightbox__img-wrap {
+  pointer-events: auto;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 2.75rem;
+}
+@media (min-width: 640px) {
+  .pitomnik-greenhouse-lightbox__img-wrap {
+    padding: 0 3.25rem;
+  }
+}
+.pitomnik-greenhouse-lightbox__img {
+  max-width: 100%;
+  max-height: min(88dvh, 100%);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-y pinch-zoom;
+}
+.pitomnik-greenhouse-lightbox__close {
+  pointer-events: auto;
+  position: absolute;
+  top: max(0.5rem, env(safe-area-inset-top));
+  right: max(0.5rem, env(safe-area-inset-right));
+  z-index: 2;
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.pitomnik-greenhouse-lightbox__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: none;
+}
+.pitomnik-greenhouse-lightbox__close:active {
+  transform: scale(0.94);
+}
+.pitomnik-greenhouse-lightbox__nav {
+  pointer-events: auto;
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  color: #1e293b;
+  cursor: pointer;
+  transform: translateY(-50%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: background 0.15s ease;
+}
+.pitomnik-greenhouse-lightbox__nav:hover {
+  background: #fff;
+  transform: translateY(-50%);
+}
+.pitomnik-greenhouse-lightbox__nav:active {
+  transform: translateY(-50%) scale(0.96);
+}
+.pitomnik-greenhouse-lightbox__nav--prev {
+  left: max(0.35rem, env(safe-area-inset-left));
+}
+.pitomnik-greenhouse-lightbox__nav--next {
+  right: max(0.35rem, env(safe-area-inset-right));
+}
+.pitomnik-greenhouse-lightbox__nav svg {
+  display: block;
+}
+
+/* Каталог: shimmer-плейсхолдер на контейнере фото, пока изображение грузится (JS добавляет is-loaded) */
+[data-img-skeleton] {
+  position: relative;
+}
+[data-img-skeleton]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(226, 232, 240, 0.65) 30%,
+    rgba(248, 250, 252, 0.95) 50%,
+    rgba(226, 232, 240, 0.65) 70%
+  );
+  background-size: 200% 100%;
+  animation: sg-img-skeleton-shimmer 1.4s ease-in-out infinite;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+[data-img-skeleton].is-loaded::before {
+  opacity: 0;
+  animation: none;
+}
+[data-img-skeleton] img {
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+[data-img-skeleton].is-loaded img {
+  opacity: 1;
+}
+@keyframes sg-img-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-img-skeleton]::before {
+    animation: none;
+  }
+  [data-img-skeleton] img {
+    transition: none;
+  }
+}
+
+/* Карточка растения: полноэкранный лайтбокс главного фото (по образцу pitomnik-greenhouse-lightbox) */
+.sg-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: none;
+  box-sizing: border-box;
+}
+.sg-photo-lightbox.is-open {
+  display: block;
+}
+.sg-photo-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  cursor: pointer;
+}
+.sg-photo-lightbox__surface {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+}
+.sg-photo-lightbox__img-wrap {
+  pointer-events: auto;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 2.75rem;
+}
+@media (min-width: 640px) {
+  .sg-photo-lightbox__img-wrap {
+    padding: 0 3.25rem;
+  }
+}
+.sg-photo-lightbox__img {
+  max-width: 100%;
+  max-height: min(88dvh, 100%);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-y pinch-zoom;
+}
+.sg-photo-lightbox__close {
+  pointer-events: auto;
+  position: absolute;
+  top: max(0.5rem, env(safe-area-inset-top));
+  right: max(0.5rem, env(safe-area-inset-right));
+  z-index: 2;
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.sg-photo-lightbox__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: none;
+}
+.sg-photo-lightbox__close:active {
+  transform: scale(0.94);
+}
+.sg-photo-lightbox__nav {
+  pointer-events: auto;
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  color: #1e293b;
+  cursor: pointer;
+  transform: translateY(-50%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: background 0.15s ease;
+}
+.sg-photo-lightbox__nav:hover {
+  background: #fff;
+  transform: translateY(-50%);
+}
+.sg-photo-lightbox__nav:active {
+  transform: translateY(-50%) scale(0.96);
+}
+.sg-photo-lightbox__nav.is-hidden {
+  display: none;
+}
+.sg-photo-lightbox__nav--prev {
+  left: max(0.35rem, env(safe-area-inset-left));
+}
+.sg-photo-lightbox__nav--next {
+  right: max(0.35rem, env(safe-area-inset-right));
+}
+.sg-photo-lightbox__nav svg {
+  display: block;
+}
+
+
+/* Куки-плашка видима: поднимаем кнопку Битрикс24 (справа внизу) над ней.
+   Высоту плашки задаёт app.js через --sg-cookie-banner-h (syncFloatingUiAboveCookieBanner);
+   !important нужен, т.к. виджет Б24 позиционируется собственными стилями из CDN. */
+body.sg-cookie-banner-open .b24-widget-button-wrapper {
+  bottom: calc(var(--sg-cookie-banner-h, 0px) + 16px) !important;
+}
+
+/* —— Локальная витрина /opt (apps/opt-catalog) —— */
+.opt-page {
+  --opt-ink: #16301a;
+  --opt-accent: #2e7d32;
+  --opt-cream: #eaf1e1;
+  --opt-mist: #f3f6ef;
+  font-family: Manrope, "Segoe UI", sans-serif;
+}
+
+.opt-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(22, 48, 26, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.opt-header__inner {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.opt-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: var(--opt-ink);
+  min-width: 0;
+}
+
+.opt-header__logo {
+  display: block;
+  height: 40px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .opt-header__logo {
+    height: 46px;
+  }
+}
+
+.opt-header__tag {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(22, 48, 26, 0.18);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--opt-ink);
+  line-height: 1;
+}
+
+.opt-header__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.opt-header__phone {
+  display: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  text-decoration: none;
+}
+.opt-header__phone:hover {
+  color: var(--opt-accent);
+}
+@media (min-width: 640px) {
+  .opt-header__phone {
+    display: inline;
+  }
+}
+
+.opt-header__cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: var(--opt-ink);
+  color: #fff;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+}
+.opt-header__cart:hover {
+  background: var(--opt-accent);
+}
+.opt-header__cart-count {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+}
+
+.opt-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: min(78vh, 640px);
+  display: grid;
+  align-items: end;
+  color: #fff;
+  overflow: hidden;
+  background: #0f1c12;
+}
+
+.opt-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.opt-hero__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 40%;
+  display: block;
+  transform: scale(1.05);
+  animation: opt-hero-ken 18s ease-out forwards;
+}
+
+.opt-hero__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(105deg, rgba(12, 28, 16, 0.78) 0%, rgba(12, 28, 16, 0.42) 52%, rgba(12, 28, 16, 0.18) 100%),
+    linear-gradient(180deg, rgba(12, 28, 16, 0.12) 0%, rgba(12, 28, 16, 0.58) 100%);
+}
+
+.opt-hero__inner {
+  width: min(72rem, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 4.5rem 0 3.25rem;
+  max-width: 38rem;
+  margin-left: max(1rem, calc((100% - 72rem) / 2 + 1rem));
+  animation: opt-hero-rise 0.7s ease-out both;
+}
+
+.opt-hero__brand {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--opt-cream);
+}
+
+.opt-hero__title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.35rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  max-width: 14ch;
+}
+
+.opt-hero__lead {
+  margin: 1rem 0 0;
+  max-width: 34ch;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: rgba(234, 241, 225, 0.88);
+  font-weight: 500;
+}
+
+.opt-hero__cta {
+  margin-top: 1.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.opt-hero__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.85rem;
+  padding: 0.7rem 1.25rem;
+  border-radius: 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.opt-hero__btn:hover {
+  transform: translateY(-1px);
+}
+.opt-hero__btn--primary {
+  background: #f0c75e;
+  color: var(--opt-ink);
+}
+.opt-hero__btn--primary:hover {
+  background: #f6d57a;
+}
+.opt-hero__btn--ghost {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.opt-hero__btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes opt-hero-ken {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes opt-hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opt-hero__img,
+  .opt-hero__inner {
+    animation: none;
+  }
+  .opt-hero__img {
+    transform: none;
+  }
+}
+
+/* Ступени скидки: компактная полоса, не карточки в hero */
+.opt-tiers {
+  display: grid;
+  gap: 1rem 1.5rem;
+  padding: 1.25rem 0 0.25rem;
+  border-bottom: 1px solid rgba(22, 48, 26, 0.08);
+}
+@media (min-width: 900px) {
+  .opt-tiers {
+    grid-template-columns: minmax(12rem, 18rem) 1fr;
+    align-items: end;
+  }
+}
+.opt-tiers__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--opt-ink);
+  letter-spacing: -0.02em;
+}
+.opt-tiers__lead {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #64748b;
+}
+.opt-tiers__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.35rem;
+}
+.opt-tiers__list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: var(--opt-mist);
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.opt-tiers__list strong {
+  color: var(--opt-accent);
+  font-weight: 800;
+}
+
+/* Фото в карточках: без полей, cover на весь кадр */
+.opt-card-media {
+  padding: 0 !important;
+}
+.opt-card-media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+.opt-card-media:hover > img {
+  transform: scale(1.04);
+  transition: transform 0.35s ease;
+}
+.opt-card-media > img {
+  transition: transform 0.35s ease;
+}
