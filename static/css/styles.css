@@ -530,320 +530,74 @@ body.sg-cookie-banner-open .b24-widget-button-wrapper {
   bottom: calc(var(--sg-cookie-banner-h, 0px) + 16px) !important;
 }
 
-/* —— Локальная витрина /opt (apps/opt-catalog) —— */
-.opt-page {
-  --opt-ink: #16301a;
-  --opt-accent: #2e7d32;
-  --opt-cream: #eaf1e1;
-  --opt-mist: #f3f6ef;
-  font-family: Manrope, "Segoe UI", sans-serif;
-}
-
-.opt-header {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: rgba(255, 255, 255, 0.92);
-  border-bottom: 1px solid rgba(22, 48, 26, 0.08);
-  backdrop-filter: blur(10px);
-}
-
-.opt-header__inner {
-  margin: 0 auto;
-  max-width: 72rem;
-  padding: 0.9rem 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1rem;
-}
-
-.opt-header__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  text-decoration: none;
-  color: var(--opt-ink);
-  min-width: 0;
-}
-
-.opt-header__logo {
-  display: block;
-  height: 40px;
-  width: auto;
-  flex-shrink: 0;
-}
-
-@media (min-width: 640px) {
-  .opt-header__logo {
-    height: 46px;
-  }
-}
-
-.opt-header__tag {
-  display: inline-flex;
-  align-items: center;
-  padding-left: 0.75rem;
-  border-left: 1px solid rgba(22, 48, 26, 0.18);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--opt-ink);
-  line-height: 1;
-}
-
-.opt-header__actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.opt-header__phone {
-  display: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #334155;
-  text-decoration: none;
-}
-.opt-header__phone:hover {
-  color: var(--opt-accent);
-}
-@media (min-width: 640px) {
-  .opt-header__phone {
-    display: inline;
-  }
-}
-
-.opt-header__cart {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  border: 0;
-  border-radius: 0.65rem;
-  background: var(--opt-ink);
-  color: #fff;
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 700;
-  padding: 0.55rem 1rem;
-  cursor: pointer;
-}
-.opt-header__cart:hover {
-  background: var(--opt-accent);
-}
-.opt-header__cart-count {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.1rem 0.45rem;
-  font-size: 0.75rem;
-}
-
-.opt-hero {
-  position: relative;
-  isolation: isolate;
-  min-height: min(78vh, 640px);
+/* Две лестницы скидок: пять чипов строго в один ряд */
+.opt-tier-chips {
   display: grid;
-  align-items: end;
-  color: #fff;
-  overflow: hidden;
-  background: #0f1c12;
-}
-
-.opt-hero__media {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-}
-
-.opt-hero__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 40%;
-  display: block;
-  transform: scale(1.05);
-  animation: opt-hero-ken 18s ease-out forwards;
-}
-
-.opt-hero__shade {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(105deg, rgba(12, 28, 16, 0.78) 0%, rgba(12, 28, 16, 0.42) 52%, rgba(12, 28, 16, 0.18) 100%),
-    linear-gradient(180deg, rgba(12, 28, 16, 0.12) 0%, rgba(12, 28, 16, 0.58) 100%);
-}
-
-.opt-hero__inner {
-  width: min(72rem, calc(100% - 2rem));
-  margin: 0 auto;
-  padding: 4.5rem 0 3.25rem;
-  max-width: 38rem;
-  margin-left: max(1rem, calc((100% - 72rem) / 2 + 1rem));
-  animation: opt-hero-rise 0.7s ease-out both;
-}
-
-.opt-hero__brand {
-  margin: 0 0 0.75rem;
-  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  color: var(--opt-cream);
-}
-
-.opt-hero__title {
-  margin: 0;
-  font-size: clamp(2rem, 5vw, 3.35rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
-  max-width: 14ch;
-}
-
-.opt-hero__lead {
-  margin: 1rem 0 0;
-  max-width: 34ch;
-  font-size: 1.05rem;
-  line-height: 1.45;
-  color: rgba(234, 241, 225, 0.88);
-  font-weight: 500;
-}
-
-.opt-hero__cta {
-  margin-top: 1.6rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.opt-hero__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.85rem;
-  padding: 0.7rem 1.25rem;
-  border-radius: 0.7rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-decoration: none;
-  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
-}
-.opt-hero__btn:hover {
-  transform: translateY(-1px);
-}
-.opt-hero__btn--primary {
-  background: #f0c75e;
-  color: var(--opt-ink);
-}
-.opt-hero__btn--primary:hover {
-  background: #f6d57a;
-}
-.opt-hero__btn--ghost {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-}
-.opt-hero__btn--ghost:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-@keyframes opt-hero-ken {
-  from {
-    transform: scale(1.06);
-  }
-  to {
-    transform: scale(1);
-  }
-}
-@keyframes opt-hero-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .opt-hero__img,
-  .opt-hero__inner {
-    animation: none;
-  }
-  .opt-hero__img {
-    transform: none;
-  }
-}
-
-/* Ступени скидки: компактная полоса, не карточки в hero */
-.opt-tiers {
-  display: grid;
-  gap: 1rem 1.5rem;
-  padding: 1.25rem 0 0.25rem;
-  border-bottom: 1px solid rgba(22, 48, 26, 0.08);
-}
-@media (min-width: 900px) {
-  .opt-tiers {
-    grid-template-columns: minmax(12rem, 18rem) 1fr;
-    align-items: end;
-  }
-}
-.opt-tiers__title {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--opt-ink);
-  letter-spacing: -0.02em;
-}
-.opt-tiers__lead {
-  margin: 0.35rem 0 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  color: #64748b;
-}
-.opt-tiers__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.35rem;
-}
-.opt-tiers__list li {
-  display: inline-flex;
-  align-items: baseline;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.4rem;
-  padding: 0.45rem 0.75rem;
-  border-radius: 999px;
-  background: var(--opt-mist);
-  color: #334155;
-  font-size: 0.82rem;
-  font-weight: 600;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
 }
-.opt-tiers__list strong {
-  color: var(--opt-accent);
-  font-weight: 800;
+.opt-tier-chips > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center !important;
+  justify-content: center;
+  align-content: center;
+  gap: 0.25rem 0.375rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  height: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
+  padding: 0.55rem 0.5rem;
+}
+.opt-tier-chips > li span,
+.opt-tier-chips > li strong,
+.opt-tier-chips > li .opt-tier-pct {
+  font-size: 0.75rem !important;
+  line-height: 1.2 !important;
+  font-weight: 700;
+  display: inline;
+  vertical-align: middle;
+}
+@media (max-width: 767px) {
+  .opt-tier-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+  .opt-tier-chips > li {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+    white-space: nowrap;
+  }
 }
 
-/* Фото в карточках: без полей, cover на весь кадр */
-.opt-card-media {
-  padding: 0 !important;
+/* Карточка товара: вертикальные фото без белых полей слева/справа.
+   Раньше max-h + object-contain вписывали кадр в широкий блок и давали поля. */
+[data-opt-gallery-frame] {
+  background: #0f172a;
+  line-height: 0;
 }
-.opt-card-media > img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+[data-opt-gallery-frame] [data-opt-gallery-slide] {
   display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  object-fit: cover !important;
+  object-position: center top;
 }
-.opt-card-media:hover > img {
-  transform: scale(1.04);
-  transition: transform 0.35s ease;
-}
-.opt-card-media > img {
-  transition: transform 0.35s ease;
+[data-opt-gallery-frame] [data-opt-gallery-slide].hidden {
+  display: none !important;
 }
